@@ -85,6 +85,7 @@ until then. The compact reader checks the directory and file descriptors;
 it doesn't keep checksumming every file. We still write the CRCs needed for
 UBF1 compatibility. This doesn't guarantee recovery from every electrical failure.
 
-The `2026 Hexbus` signature sits at offset `>1FDC` in the UBE1 GROM. Nothing
-executes it. We can improve the comments and directions while checking that
-the assembled bytes stay exactly the same.
+There's a small `2026 Hexbus` signature at offset `>1FDC` in the UBE1 GROM.
+It uses 11 bytes at the end and doesn't run or appear on screen. If you use
+this GROM in another project, I ask that you leave it there so people know
+where it came from.
