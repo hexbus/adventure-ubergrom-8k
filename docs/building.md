@@ -23,7 +23,7 @@ You only need the individual
 [advent.zip](https://ftp.whtech.com/?do=download&file=Cartridges%2FMAME%2Fzip%2Fadvent.zip),
 although WHTech also has `all_carts.zip` under `Cartridges/MAME/`.
 The [Pirate Adventure disk](https://ftp.whtech.com/?do=download&file=Diskettes%2FCartridge_Disks%2FAdventure%2FPirates_Adventure_PHD5043.dsk)
-has a PROGRAM file named `PIRATE`. We checked these paths and built that example
+has a PROGRAM file named `PIRATE`. I checked these paths and built that example
 on September 23, 2026. The material on WHTech still belongs to its original authors.
 
 The builder checks the original GROM and firmware against the hashes in
@@ -63,7 +63,7 @@ Check the catalog for other disks' filenames. PC99 track-format disks need to
 be converted first, or you can export their PROGRAM files to TIFILES.
 
 Names can be 1-10 uppercase letters, digits, underscores, hyphens, apostrophes
-or slashes. You can use your own version of `MISSION`, for example. We don't
+or slashes. You can use your own version of `MISSION`, for example. I don't
 force a particular edition. You can't use the same name twice, but two names
 with exactly the same data share one copy in the ROM.
 

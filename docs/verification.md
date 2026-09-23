@@ -1,8 +1,8 @@
 <!-- Copyright (c) 2026 hexbus. SPDX-License-Identifier: CC-BY-4.0 -->
 
-# What we froze and checked
+# What I froze and checked
 
-We're keeping this Adventure version as it is: the 8K UBE1 GROM with the
+I am keeping this Adventure version as it is: the 8K UBE1 GROM with the
 `2026 Hexbus` signature, the 318-byte ROM1 loader, and the blank EEPROM with
 the corrected GROM mapping. Their sizes and hashes are in
 [release/frozen.json](../release/frozen.json). The original freeze is tagged
@@ -14,13 +14,13 @@ On my hardware, I've loaded an adventure, saved a game and loaded that save
 back up. Copying a file within UBE1 and deleting one from TI BASIC work too.
 The mapping fix gets rid of REVIEW MODULE LIBRARY.
 
-We also ran emulator and host tests for Adventure save/restore, BASIC PROGRAM
+I also ran emulator and host tests for Adventure save/restore, BASIC PROGRAM
 and record files, catalogs, menu copy/delete, full-storage errors, and keeping
 writes out of UberGROM's protected configuration. The signature-only change
 passed those checks. This doesn't mean we've tested every hardware setup or
 what happens with every possible power failure.
 
-To check the new builder, we rebuilt both of our existing adventure collections.
+To check the new builder, I rebuilt both of our existing adventure collections.
 All the programming images matched the signed reference byte for byte. We also
 built the WHTech PIRATE example from the [build directions](building.md).
 There's a short [verification summary](../release/verification.json) with the
