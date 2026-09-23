@@ -31,24 +31,24 @@
       "sha256": "8c5d9a07133f5abd7d16d93c2f188f28ed11918004e22bbb604fbe44665ac166"
     },
     "README.md": {
-      "bytes": 2121,
-      "sha256": "8f8667c9c44bd35f5a5602c7aa535761c047fb0ae12826bfdf463b2c1fb41919"
+      "bytes": 2587,
+      "sha256": "2403c7d84b3252ad990a2ae38775ab1958222f949fb0ca18a157be459c80188f"
     },
     "docs/building.md": {
-      "bytes": 3882,
-      "sha256": "abd2c5d1794634a4ac1f2767490aca5b86cdd6e914d74a3e478197fa4acacbc3"
+      "bytes": 4030,
+      "sha256": "fb9b779710d2495ac60013bca510604af3309e182bd0b2cb22908bf740bd6adc"
     },
     "docs/code-guide.md": {
-      "bytes": 4216,
-      "sha256": "c74cbb4090c603b64fbd67073e07a17ea20c45f509b341783a4b769271c51a0b"
+      "bytes": 4905,
+      "sha256": "7f3cbca71ec528ecac94d842af04df37d08d5881297b0d1e7e8cf006f6f42e8c"
     },
     "docs/programming.md": {
-      "bytes": 2834,
-      "sha256": "368cb73ec61364aacb0397263ae251aa00653403b63370785aef52c457a8ffb1"
+      "bytes": 3320,
+      "sha256": "8c4d77a2ae36b2f920df42a8b6bd19d28ac01fd9347bb96c40625fbe79313e9e"
     },
     "docs/verification.md": {
-      "bytes": 2434,
-      "sha256": "977b7af22b20007870d4c3f182d33adaabf8e1e7b5683a9d6f5e903edc95ef82"
+      "bytes": 2740,
+      "sha256": "0d8b96879334adb636af51fe379de59cb8e65c319bda0be27bd9fb7778b90459"
     },
     "examples/adventures.json": {
       "bytes": 103,
@@ -130,5 +130,6 @@
       "bytes": 2603,
       "sha256": "5cee0f5868e70eacf18c28e9678f2108833d8c5cca2f4a66621774b6211a080b"
     }
-  }
+  },
+  "documentation_revision": "Conversational wording; runtime and original freeze tag unchanged"
 }

@@ -1,38 +1,40 @@
 <!-- Copyright (c) 2026 hexbus. SPDX-License-Identifier: CC-BY-4.0 -->
 
-# Build your own Adventure cartridge
+# Put your own adventures in the cartridge
 
-Use Python 3.10 or later. Normal builds use the frozen binary components and
-do not need an assembler. The optional disk-image reader and source-rebuild
-check use [xdt99](https://github.com/endlos99/xdt99).
+You'll need Python 3.10 or later. The normal build uses the finished GROM and
+loader, so you don't have to assemble anything. If you want to read files
+straight from a disk image, or rebuild the GPL source, you'll also need
+[xdt99](https://github.com/endlos99/xdt99).
 
-## Get the inputs
+## Get the files
 
-Keep downloaded files under `local-inputs/`, which Git and the release exporter
-exclude. Inputs are never uploaded or fetched automatically by the builder.
+Put your downloads in `local-inputs/`. That directory stays out of Git and the
+GitHub release copy. The builder uses the files you give it; it doesn't download
+or upload them.
 
-| Input | Source and file to use |
+| What you need | Where to get it |
 | --- | --- |
-| Original Adventure module | [WHTech MAME cartridges](https://ftp.whtech.com/#Cartridges%2FMAME%2Fzip): extract `phm3041g3.bin` from `advent.zip` |
-| Adventure game disks | [WHTech Adventure disks](https://ftp.whtech.com/#Diskettes%2FCartridge_Disks%2FAdventure): choose your games; the builder reads ordinary sector-based TI DSK images |
-| UberGROM firmware | [Tursi's UberGROM](https://github.com/tursilion/ubergrom): use `dist/GROMSim/ubergrom.hex`, unchanged |
+| Original Adventure GROM | [WHTech MAME cartridges](https://ftp.whtech.com/#Cartridges%2FMAME%2Fzip): get `advent.zip` and extract `phm3041g3.bin` |
+| Adventure disks | [WHTech Adventure disks](https://ftp.whtech.com/#Diskettes%2FCartridge_Disks%2FAdventure): pick the adventures you want |
+| UberGROM firmware | [Tursi's UberGROM](https://github.com/tursilion/ubergrom): use the unchanged `dist/GROMSim/ubergrom.hex` |
 
-The cartridge directory also offers an `all_carts.zip` collection under
-`Cartridges/MAME/`. The individual
-[advent.zip download](https://ftp.whtech.com/?do=download&file=Cartridges%2FMAME%2Fzip%2Fadvent.zip)
-is sufficient. The documented
-[PIRATE disk download](https://ftp.whtech.com/?do=download&file=Diskettes%2FCartridge_Disks%2FAdventure%2FPirates_Adventure_PHD5043.dsk)
-contains a PROGRAM file named `PIRATE`. These paths and that build example were
-checked on September 23, 2026.
-WHTech is an archive of original material; original credits and rights remain.
-The exact supported module and firmware SHA-256 values are in
-[release/frozen.json](../release/frozen.json). The builder refuses an unexpected
-module or firmware rather than silently changing this frozen runtime.
+You only need the individual
+[advent.zip](https://ftp.whtech.com/?do=download&file=Cartridges%2FMAME%2Fzip%2Fadvent.zip),
+although WHTech also has `all_carts.zip` under `Cartridges/MAME/`.
+The [Pirate Adventure disk](https://ftp.whtech.com/?do=download&file=Diskettes%2FCartridge_Disks%2FAdventure%2FPirates_Adventure_PHD5043.dsk)
+has a PROGRAM file named `PIRATE`. We checked these paths and built that example
+on September 23, 2026. The material on WHTech still belongs to its original authors.
 
-## Choose the files
+The builder checks the original GROM and firmware against the hashes in
+[release/frozen.json](../release/frozen.json). If they don't match, it stops.
+That keeps an unexpected module or firmware revision out of this frozen build.
 
-Create a JSON file listing the names you want under ROM1. Paths are relative
-to that JSON file. For example, `local-inputs/adventures.json` can contain:
+## Make your list
+
+Make a JSON file with the names you want to use after `ROM1.`. File paths are
+relative to that JSON file. For example, put this in
+`local-inputs/adventures.json`:
 
 ```json
 {
@@ -42,41 +44,47 @@ to that JSON file. For example, `local-inputs/adventures.json` can contain:
 }
 ```
 
-Supported formats:
+There are three ways to supply a game:
 
-- `tifiles`: a PROGRAM file with its 128-byte TIFILES header. The builder removes
-  the header and sector padding according to its length fields.
-- `raw`: only the original PROGRAM payload, without a TIFILES header or disk
-  metadata. A `.bin` extension alone does not identify the contents.
-- `disk`: select one PROGRAM file from a sector-based TI disk. Add a `file`
-  field containing its on-disk filename and pass `--xdt99` when building.
+- **`tifiles`** is a PROGRAM file with a 128-byte TIFILES header. The builder
+  takes off the header and uses its length fields to remove sector padding.
+- **`raw`** is just the PROGRAM data, with no file header or disk information.
+  A file ending in `.bin` isn't necessarily raw - check what it contains.
+- **`disk`** takes a PROGRAM file from a normal sector-based TI disk image.
+  Add `file` for the name on the disk, and pass `--xdt99` when you build.
 
-Example disk entry:
+For the WHTech Pirate disk, the entry inside your `files` list would be:
 
 ```json
 {"name": "PIRATE", "path": "Pirates_Adventure_PHD5043.dsk", "format": "disk", "file": "PIRATE"}
 ```
 
-Check each disk's catalog for the actual filename. PC99 track-format disks
-must first be converted or their PROGRAM files exported to TIFILES.
+Check the catalog for other disks' filenames. PC99 track-format disks need to
+be converted first, or you can export their PROGRAM files to TIFILES.
 
-ROM1 names are 1-10 uppercase letters, digits, underscores, hyphens, apostrophes
-or slashes.
-You choose which version to include: `MISSION` is not forced to a particular
-edition. Duplicate names are rejected; different names with identical payloads
-share storage. A payload may occupy at most 15,360 bytes, and the whole ROM must
-fit in 512 KiB. This checks packaging, not the gameplay correctness of your data.
+Names can be 1-10 uppercase letters, digits, underscores, hyphens, apostrophes
+or slashes. You can use your own version of `MISSION`, for example. We don't
+force a particular edition. You can't use the same name twice, but two names
+with exactly the same data share one copy in the ROM.
 
-## Build
+Each game file can be up to 15,360 bytes, and everything has to fit in the
+512K ROM. The builder checks that it fits; it can't tell you whether somebody
+modified or damaged the game itself.
 
-Run from this repository, using a new output folder each time:
+## Build it
+
+From the repository directory, run:
 
 ```powershell
 python tools/build.py --adventures local-inputs/adventures.json --grom local-inputs/phm3041g3.bin --firmware local-inputs/ubergrom.hex --out output/my-cartridge
 ```
 
-For disk entries, append `--xdt99 E:/git/xdt99` (or your xdt99 checkout).
-The build writes the programming images, `manifest.json` with file hashes,
-and `rom-map.txt` with each filename, length, bank and byte offset.
-It never writes to a programmer or changes an existing output folder.
-Follow the [programming directions](programming.md).
+If your list uses disk images, add `--xdt99 E:/git/xdt99`, using the path to
+your own xdt99 directory.
+
+Use a new output directory for each build. The builder won't overwrite an old
+one. You'll get the programming files, a `manifest.json` with their hashes,
+and a `rom-map.txt` showing the filenames, sizes, banks and offsets.
+
+It doesn't program the chips. That's the next step in the
+[programming directions](programming.md).

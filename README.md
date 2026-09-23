@@ -2,44 +2,53 @@
 
 # Adventure UberGROM 8K
 
-A finished Adventure cartridge by **hexbus**: load adventures from **ROM1**,
-save progress to **UBE1**, and manage saved games from the cartridge menu.
-UBE1 means UBergromEeprom1.
+I wanted to put the adventures and a small place to save games inside the
+cartridge. Pick an adventure, play it, save it, and come back to it later -
+without needing a disk system or cassette recorder.
 
-The DSR, file manager and BASIC CALL CAT occupy 8,167 bytes of one 8 KiB GROM,
-including `2026 Hexbus`. The remaining 25 bytes are padding. The original
-Adventure module and its small ROM1 loader occupy a separate GROM slot.
+That's what this does. **ROM1** holds the adventures, and **UBE1** holds your
+saved games. UBE1 stands for **UBergromEeprom1**. There's a **SAVED GAMES** item
+on the cartridge menu, and TI BASIC can catalog and delete files too.
 
-This repository freezes that runtime. ToD, printer and cassette redirection
-belong to separate development work and are not features of this release.
+We kept the DSR, file manager and BASIC CALL CAT together in one 8K GROM.
+They use 8,167 bytes, including the little `2026 Hexbus` signature. That leaves
+25 bytes. The original Adventure GROM and the ROM1 loader are in another slot.
 
-## Supply your own adventures
+This is the version we're freezing. Tunnels of Doom and the printer/cassette
+ideas are still on the backlog, but they'll be worked on separately.
 
-No adventure databases, original Adventure module, or AVR firmware are bundled.
-The [build guide](docs/building.md) has WHTech links and a short file-list example.
-Python builds your own 512 KiB ROM and complete ATmega programming images using
-the frozen components in [release](release/).
+## Put your own adventures in it
 
-- [Build with your own files](docs/building.md)
-- [Use and program the cartridge](docs/programming.md)
-- [How the code works](docs/code-guide.md)
-- [Freeze and verification](docs/verification.md)
+The adventure files aren't included here. You'll also need the original
+Adventure GROM and Tursi's UberGROM firmware. The [build directions](docs/building.md)
+have the WHTech links and show how to make your own list of adventures.
 
-The included 8 KiB GROM is our service alone, **not** a full ATmega image.
-The included EEPROM is blank; retain existing saves before reprogramming.
+The builder makes a 512K adventure ROM and the ATmega programming files using
+our finished components in [release](release/).
 
-## Credits
+- [Build it with your adventures](docs/building.md)
+- [Program the cartridge, play and save](docs/programming.md)
+- [What's going on in the code](docs/code-guide.md)
+- [What we froze and checked](docs/verification.md)
 
-Project by **hexbus**: [GitHub](https://github.com/hexbus) and
-[www.hexbus.com](https://www.hexbus.com).
-Thanks to **Mike Brent (Tursi)** for UberGROM and his mapping advice, and
-**Fred** for the original ROM disk discussions. Original authors retain their
-credits; see [NOTICE.txt](NOTICE.txt).
+The 8K GROM in `release/` is just our DSR and menu. It isn't a complete ATmega
+image. The EEPROM file starts with an empty save area, so back up your existing
+EEPROM before programming over a cartridge you've been using.
 
-Original code is **Apache 2.0**; documentation is **CC BY 4.0**.
-Both preserve applicable attribution when redistributed. [License details](LICENSE.md).
-Please keep the embedded `2026 Hexbus` signature when reusing the UBE1 GROM.
+## Thanks and credits
 
-This is a local release preparation. No GitHub repository has been created
-or published. `github-release/` is an export made by `tools/prepare_release.py`;
-private inputs and historical cartridge images are excluded.
+Thanks to **Tursi (Mike Brent)** for UberGROM, the firmware and documentation,
+and for pointing out the mapping that gets rid of REVIEW MODULE LIBRARY.
+Thanks to **Fred** for the original ROM disk discussions.
+
+This project is by **hexbus**. You can find my other stuff on
+[GitHub](https://github.com/hexbus) and at [www.hexbus.com](https://www.hexbus.com).
+The original authors keep their credits - see [NOTICE.txt](NOTICE.txt).
+
+The code is **Apache 2.0** and the documentation is **CC BY 4.0**.
+See the [license details](LICENSE.md). If you use the UBE1 GROM in something
+else, I ask that you keep the `2026 Hexbus` signature in it so people know
+where it came from.
+
+The GitHub copy is prepared in `github-release/`. Nothing has been published
+yet. That copy leaves out our private inputs and old cartridge images.
