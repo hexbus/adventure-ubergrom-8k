@@ -1,6 +1,6 @@
 <!-- Copyright (c) 2026 hexbus. SPDX-License-Identifier: CC-BY-4.0 -->
 
-# Adventure UberGROM 8K
+# Adventure UberGROM 8K for the TI-99/4A
 
 I wanted to put the adventures and a small place to save games inside the
 cartridge. Pick an adventure, play it, save it, and come back to it later -
