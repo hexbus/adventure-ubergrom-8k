@@ -7,12 +7,15 @@ Having that at my fingertips as well as the ability to save one or more games in
 the cartridge without having to worry about a disk or cassette system to manage 
 saved games is something I've always dreamed about.
 
-That's what this does. **ROM1** holds the adventures, and **UBE1** holds your
-saved games. UBE1 stands for **UBergromEeprom1**. There's a **SAVED GAMES** item
-on the cartridge menu, and TI BASIC can catalog and delete files too.
+That's what this does. Using an UberGROM with a built-in **ROM1** device to hold the adventures, 
+and a built-in **UBE1** device to hold your saved games. UBE1 stands for **UBergromEeprom1**. 
+There's a **SAVED GAMES** item on the cartridge menu, and TI BASIC can catalog 
+and delete saved files too.  This idea originally came from the ROMDSK project I 
+envisioned several years ago plus an idea from Tursi's [Super Space Acer](https://www.arcadeshopper.com/wp/store/#!/Super-Space-Acer-2024-limited-edition/p/755974759/category=0) game 
+because it was able to save high scores on an UberGROM.
 
 We kept the DSR, file manager and BASIC CALL CAT together in one 8K GROM.
-They use 8,167 bytes, including the little `2026 Hexbus` signature. That leaves
+The DSR ROM uses 8,167 bytes, including the little `2026 Hexbus` signature. That leaves
 25 bytes. The original Adventure GROM and the ROM1 loader are in another slot.
 
 This is the version we're freezing. Tunnels of Doom and the printer/cassette
