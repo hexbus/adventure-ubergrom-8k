@@ -31,16 +31,16 @@
       "sha256": "8c5d9a07133f5abd7d16d93c2f188f28ed11918004e22bbb604fbe44665ac166"
     },
     "README.md": {
-      "bytes": 2438,
-      "sha256": "33761c0bf10f4b47ada353e5501b76fc40a88b2493f30eddcde2097c68f15849"
+      "bytes": 2455,
+      "sha256": "923729beaffeeb3cbca6744b517855c95e527a0cd607dc9bfd474be1bc2f9cda"
     },
     "docs/building.md": {
       "bytes": 4030,
       "sha256": "fb9b779710d2495ac60013bca510604af3309e182bd0b2cb22908bf740bd6adc"
     },
     "docs/code-guide.md": {
-      "bytes": 4956,
-      "sha256": "77466edff5ca5e4a33dbd91d68857db61364e0a046e7ddf2406d7e0cd6e0f512"
+      "bytes": 9845,
+      "sha256": "eda3e071ce750d150e23842cd291da1918b43257ad8a326ecb40527ad281a3d0"
     },
     "docs/maintaining.md": {
       "bytes": 1493,
@@ -83,32 +83,32 @@
       "sha256": "34141fa56713dfa4e6e4f9fd2d5510a471eb8ab0e50a55d91fafb7144a43e04e"
     },
     "sources/gpl/rom1/rom1.gpl": {
-      "bytes": 2913,
-      "sha256": "15c188591b85cdd6af14cc71ee8698bd12f3f4334e84ddc9646431bf1f68b69f"
+      "bytes": 4093,
+      "sha256": "02560a319a6430a0094d0b51dd3b6ab2410cd0421522c2df50ff496c2711d013"
     },
     "sources/gpl/ubf1-compact/basic-cat.gpl": {
-      "bytes": 8307,
-      "sha256": "a7364e0c7f47efefa35ed5289e5a421716ce31a669f63611b700d616e222db45"
+      "bytes": 8969,
+      "sha256": "4526d910534293dbc9d360821cb6577ad88a57716e66b92e2108c98580e8308f"
     },
     "sources/gpl/ubf1-compact/directory.gpl": {
-      "bytes": 2172,
-      "sha256": "42d35cd524450fc7094f1d73b6302bdc1894b2bf4f50e4c6f39fb32dc712c089"
+      "bytes": 2678,
+      "sha256": "2b9a2225515621b9bfba0c2d7c8f74e011c3117bbeb7eb8bc963e2768d6f189c"
     },
     "sources/gpl/ubf1-compact/manager.gpl": {
-      "bytes": 10107,
-      "sha256": "38d538d05c6fa7e6b2ffd5b555a7dde17695f17c08216c82a6ca57b0670e4beb"
+      "bytes": 10816,
+      "sha256": "2361ab8808eda0a4bd659ff36520d4583a6e93fc8c7f7b9d65d4842b6e9329ed"
     },
     "sources/gpl/ubf1-compact/records.gpl": {
-      "bytes": 14985,
-      "sha256": "7da15880b19434130ecef6ebb2ebbe9c94bb5736aca8adc49e7b95ddaa14528e"
+      "bytes": 15996,
+      "sha256": "6e833231fc458a1e27e640bda489be5a94af8531ac9be30c7824d0d578f2af18"
     },
     "sources/gpl/ubf1-compact/scratch.gpl": {
-      "bytes": 898,
-      "sha256": "28893ea01810146a8edd7f3d5a79e28c08d7d2f8df2aba9d979a83f59749db63"
+      "bytes": 1190,
+      "sha256": "ecd07bf162127d197ad7f279be388a12d9a49604b9b9babe4889f7aa07c91948"
     },
     "sources/gpl/ubf1-compact/ube1.gpl": {
-      "bytes": 23623,
-      "sha256": "dba51ca005e66acce2d0688594c47cfb4ec087530e0fe16a68c45b00961c15a3"
+      "bytes": 25163,
+      "sha256": "a9da3e2d61abda74dbc2a2781eb16d44a483c2faf2d44d3727a410c214798a8e"
     },
     "tests/verify.py": {
       "bytes": 4422,

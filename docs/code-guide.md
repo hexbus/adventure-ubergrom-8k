@@ -18,6 +18,39 @@ The source is TI **Graphics Programming Language (GPL)**. Here's where to look:
 | [basic-cat.gpl](../sources/gpl/ubf1-compact/basic-cat.gpl) | BASIC CALL CAT and the catalog/display routines it shares with the menu |
 | [scratch.gpl](../sources/gpl/ubf1-compact/scratch.gpl) | Small routines used in several places to save code space |
 
+## Does ROM1 need the 8K UBE1 GROM to load an adventure?
+
+**No. The 318-byte ROM1 loader does the whole PROGRAM LOAD itself.** It finds
+the name in the ROM directory, switches banks and copies the contents into
+the caller's VDP buffer. It doesn't call UBE1 or use its EEPROM or working RAM.
+
+It does need the console's GPL/file routines, a cartridge header that points
+to its DSR entry, and a CF01 ROM using the bank switching shown in `rom1.gpl`.
+The 512K ROM contains the directory and adventure data; the loader is GPL code
+in Adventure's GROM tail.
+
+The separate 8K UBE1 GROM adds the other features:
+
+| What you want to do | Which part handles it |
+| --- | --- |
+| Load `ROM1.PIRATE` | The 318-byte ROM1 loader |
+| Save or reload `UBE1.PIRATE` | The UBE1 file service in the 8K GROM |
+| Use BASIC DELETE on a UBE1 file | The UBE1 file service |
+| Use the SAVED GAMES menu | The menu and UBE1 file service in the 8K GROM |
+| Use `CALL CAT("UBE1")` | The BASIC catalog and UBE1 file service in the 8K GROM |
+| Use `CALL CAT("ROM1")` | The BASIC catalog in the 8K GROM, reading the ROM directory directly |
+
+That last one is easy to miss: **loading from ROM1 and displaying its catalog
+are separate jobs**. The small ROM1 loader has no catalog, OPEN, READ or record
+file support. It handles PROGRAM LOAD, rejects SAVE as write-protected, and
+rejects the other operations. It's enough to load our adventures, but it isn't
+a full disk DSR.
+
+Within the 8K GROM, the menu and BASIC catalog share `CATREADDIR` and `CATTABLE`.
+The first asks UBE1 for file information; the second draws the rows. The ROM1
+catalog has its own directory reader because CF01 is a different format. These
+source files are assembled together; they aren't separately loadable services.
+
 ## When a program asks for a file
 
 The console finds our device name in the GROM header. It passes a **PAB** -
@@ -60,30 +93,109 @@ Those bases are separate from the 8K banks in the U2 adventure ROM.
 These are the mappings for this Adventure cartridge. Pairing UBE1 with another
 module means checking what that module already uses.
 
-## The ROM directory and save directory
+## What do the two file systems look like?
 
-**ROM1 uses CF01.** Bank zero has `CF01` at offset `>0010`, a big-endian file
-count at `>0014`, and 16-byte directory entries starting at `>0020`. Each entry
-has a 10-byte name padded with spaces, followed by a 2-byte length, 2-byte bank
-number and 2-byte offset in that bank.
+Think of **ROM1 as the shelf of adventures** and **UBE1 as the place for your
+saved games**. Each has a directory: a list of names and enough information to
+find each file's contents.
 
-The file data starts after bank zero and is aligned to two bytes. If two files
-have exactly the same data, they can share a copy. This version of ROM1 holds
-PROGRAM files; it doesn't store record-file types.
+| Device | What's stored there | Can we change it from the TI? |
+| --- | --- | --- |
+| ROM1 | The adventures included when we build the cartridge | No; rebuild and reprogram the ROM to change them |
+| UBE1 | Saved games and other files | Yes; save, copy and delete files |
 
-**UBE1 uses UBF1.** We leave EEPROM `>0000->0101` for UberGROM's configuration.
-Two 31-byte directory roots use `>0102->013F`. The rest, `>0140->0FFF`, gives us
-118 blocks of 32 bytes for file information and data.
+UBE1 keeps its files in **EEPROM**, so they survive turning the TI off. The
+UberGROM RAM mentioned above is temporary working space, not the save disk.
 
-There's room for up to 16 files if the data fits. The largest raw file is
-3,616 bytes, and replacing a file needs additional free blocks. We don't throw
-away the oldest save when it fills up. You decide what to delete.
+### ROM1: a list of adventures, followed by their data
 
-On a save, we check that there's room, write the new blocks, and make the new
-directory current last by writing its commit byte. The old file stays in place
-until then. The compact reader checks the directory and file descriptors;
-it doesn't keep checksumming every file. We still write the CRCs needed for
-UBF1 compatibility. This doesn't guarantee recovery from every electrical failure.
+Here's a simplified picture of the 512K ROM:
+
+```text
+Bank 0: directory
+  PIRATE  -> where PIRATE starts, and how many bytes to load
+  VOODOO  -> where VOODOO starts, and how many bytes to load
+
+Banks 1 onward: file contents
+  [ PIRATE adventure data ][ VOODOO adventure data ][ ... ]
+```
+
+When Adventure asks for `ROM1.PIRATE`, the loader finds `PIRATE` in that list,
+switches to the right ROM bank and copies the file into VDP memory. A file can
+continue across a bank boundary; it doesn't need a whole bank to itself.
+
+The builder creates the directory for us. If two names have exactly the same
+contents, both can point to the same stored copy. These are PROGRAM files;
+this ROM format doesn't store types such as DIS/VAR 80.
+
+For someone reading the code, this format is called **CF01**. Bank zero has
+`CF01` at offset `>0010`, the file count at `>0014`, and the directory at
+`>0020`. Each directory entry is just 16 bytes:
+
+```text
+Name (10 bytes) | File size (2) | Starting bank (2) | Offset in bank (2)
+```
+
+Names are padded with spaces, and the two-byte numbers have their high byte
+first. File contents start after bank zero, on even byte offsets.
+
+### UBE1: small blocks shared by all the saved files
+
+The EEPROM is only 4K, and part of it belongs to UberGROM. We divide the space
+that's left into small, 32-byte blocks. A file uses as many blocks as it needs,
+plus some blocks describing the file.
+
+```text
+4K EEPROM
+  [ UberGROM configuration - leave this alone ]
+  [ Directory A ][ Directory B ]
+  [ 118 blocks shared by file descriptions and file contents ]
+
+Current directory
+  PIRATE -> file description -> blocks holding the saved game
+  MYBASIC -> file description -> blocks holding the BASIC program
+```
+
+A file description holds its name, type, size and the list of blocks containing
+its data. For record files it also holds the record information, so UBE1 can
+tell a PROGRAM file from something like DIS/FIX 128 or DIS/VAR 80. The blocks
+for a file don't have to sit next to each other.
+
+For example, **suppose a saved game is 192 bytes**. That's an illustration,
+not a limit or a claim about every Adventure save:
+
+| What it needs | Space used |
+| --- | --- |
+| The 192 bytes of saved-game data | 6 blocks |
+| Its file description, including the block list | 2 blocks |
+| Total | 8 blocks, or 256 bytes |
+
+On an otherwise empty UBE1, that leaves 110 blocks free. A larger save uses
+more blocks; we don't reserve a fixed 192-byte slot for every file. There are
+up to 16 directory entries, but all the files share the available space. The
+largest raw file is 3,616 bytes, including neither its description nor the
+directory in that figure.
+
+When we replace a save, we write its new contents into free blocks first,
+then switch the directory to the new version. That's why replacing a file
+needs spare space even if its size hasn't changed. Once that succeeds, the
+old blocks can be reused. If there's no room, we return a disk-full error;
+we don't delete somebody's older save to make room.
+
+The two directories let us make that switch last. The code checks the
+directory and file descriptions, and writes the CRC check values required by
+the **UBF1** format. It doesn't repeatedly checksum every file, and it can't
+guarantee recovery from every electrical failure.
+
+For the exact EEPROM layout, `>0000->0101` is UberGROM's configuration,
+`>0102->013F` holds the two 31-byte directories, and `>0140->0FFF` holds the
+118 blocks. These are offsets within EEPROM, not GROM addresses.
+
+### Loading an adventure and saving your place
+
+`ROM1.PIRATE` is the adventure itself. `UBE1.PIRATE` is your saved position.
+They can have the same name because they're on different devices. Saving your
+place changes UBE1; the adventure in ROM1 stays as it was built.
 
 There's a small `2026 Hexbus` signature at offset `>1FDC` in the UBE1 GROM.
 It uses 11 bytes at the end and doesn't run or appear on screen. If you use

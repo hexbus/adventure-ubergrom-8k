@@ -11,6 +11,11 @@
 * screen 0..479 in the unused tail of the 3616-byte record buffer (>6E20),
 * screen 480..767 at >7300, BASIC scratch >7420, keyboard/base >7490/>7498.
 * Directory inspection does not allocate blocks or change the pending-write area.
+* Included by manager.gpl in the UBE1 image; depends on its display/data
+* labels and the mapped UberGROM RAM used for BASIC's saved screen.
+* UBE1 catalog: CATREADDIR calls the DSR, then CATTABLE renders its rows.
+* ROM1 catalog: BCROM reads CF01 directly. It does not call rom1.gpl or
+* provide its LOAD operation. ROM1 can load files without this CAT code.
 BCLIST DATA 0,BCENTRY
        STRI 'CAT'
 BCENTRY DADD 4,@>832C
@@ -137,6 +142,8 @@ BCUBENEXT DADD 32,@>8332
        CEQ 16,@>8322
        BR BCUBELOOP
        RTN
+* ROM catalog reader, not a file loader. Select CPU ROM bank zero and
+* display up to 16 CF01 directory entries per page; payloads stay in ROM.
 BCROM DCLR @>6000
        DCEQ >4346,@>6010
        BR BCNOTREADY
@@ -227,6 +234,8 @@ BCNEXTPAGE DST @>832E,@>8350
        BR BCWAIT
        DST @>8350,@>832E
        B BCDRAW
+* Restore BASIC's screen and scratch, then return by its CALL convention.
+* The manager's CATQUIT/EXIT path would instead leave BASIC for the title.
 BCRETURN MOVE 480,G@>6E20,V@0
        MOVE 288,G@>7300,V@480
        MOVE 112,G@>7420,@>8300

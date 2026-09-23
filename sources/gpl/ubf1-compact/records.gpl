@@ -6,6 +6,9 @@
 * Offsets: active, PAB flags, buffer(2), stored(2), logical(2), count(2),
 * reclen, TI flags, record position(2), byte position(2), dirty, reserved,
 * canonical name(10). Remaining bytes reserved and cleared.
+* Included by ube1.gpl; uses its mounted directory, metadata readers,
+* SAVE/COMMIT writer and error/return paths. The record buffer is private
+* UberGROM RAM at >6000 on base 14. None of this is needed by ROM1.
 HPTR   EQU >7090
 HFREE  EQU >7092
 SOURCE EQU >7094
@@ -21,6 +24,8 @@ HANDLE1 EQU >7500
 HANDLE2 EQU >7540
 HSIG   EQU >75F0
 
+* Called by UBE1 ENTRY before examining handles. POWERUP invalidates the
+* RAM signature so a console restart cannot leave an old file open.
 HINIT  MOVE 4,G@HSIG,@>8350
        DCEQ >5542,@>8350
        BR HRESET
@@ -109,6 +114,8 @@ EOF    OR >A0,V@>FFF7(@>4C)
        B DONE
 
        .IFNDEF PROGRAMONLY
+* OPEN: validate attributes and claim the single record-file context.
+* Existing contents are read into RAM; OUTPUT starts an empty buffer.
 OPEN   CALL GETHANDLE
        DCZ @>8350
        BR BADATTR
@@ -234,6 +241,8 @@ OPACTIVE ST >A5,@>835F
        CALL HPUT
        B DONE
 
+* Subsequent requests use the open context rather than remounting a file.
+* Dispatch CLOSE, READ, WRITE, REWIND and the private abort operation.
 RECORD CALL GETHANDLE
        DCZ @>8350
        BS BADOP
@@ -291,6 +300,8 @@ RLOCATED MOVE 2,@>8350,G@RBYTE
 REWIND MOVE 4,G@ZEROS,G@CTX+12
        CALL HPUT
        B DONE
+* CLOSE sends a dirty RAM buffer to the shared SAVE path in ube1.gpl.
+* Clean close/abort releases the handle without writing a replacement.
 CLOSE  MOVE 1,G@CTX+16,@>835F
        CZ @>835F
        BS ABORT
@@ -361,6 +372,9 @@ RECSTEP MOVE 2,G@RPOS,@>8350
        CALL HPUT
        B DONE
 
+* WRITE changes RAM and marks the file dirty; EEPROM is updated at CLOSE.
+* Fixed records have a fixed stride. Variable records carry a length byte,
+* so replacing one may require moving later bytes within the buffer.
 WRITEREC MOVE 1,G@CTX+1,@>835F
        AND 6,@>835F
        CEQ 4,@>835F

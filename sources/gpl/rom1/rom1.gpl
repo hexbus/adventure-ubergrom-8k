@@ -7,10 +7,19 @@
 * Scratch usage: >834A->835F, within the console DSR argument/scratch area.
 * The caller's PAB stays in VDP. No persistent state or expansion RAM.
 * Bank 0 is selected on every return; cartridge CPU ROM is data-only.
+*
+* Dependencies: console GPL/file routines and a cartridge header whose DSR
+* list points here. The CF01 directory/data must be in positive-switched
+* CPU ROM. This file assembles alone: no UBE1, EEPROM, private UberGROM RAM,
+* manager, or BASIC CAT code is called. CALL CAT("ROM1") lives separately
+* in basic-cat.gpl; it reads CF01 directly and is not a loader dependency.
+*
        GROM >6000
        AORG >1800
 DSRLST DATA >0000,ENTRY
        STRI 'ROM1'
+* Request entry: derive the PAB address from the console's DSR arguments.
+* Keep the request in VDP; SAVE gets write-protect, only LOAD continues.
 ENTRY  DST @>8356,@>8358
        DSUB @>8354,@>8358
        MOVE 10,V@>FFF6(@>58),@>834A
@@ -19,6 +28,8 @@ ENTRY  DST @>8356,@>8358
        BR ISLOAD
        OR >20,V@>FFF7(@>58)
        B DONE
+* Validate opcode and ROM1.NAME, then select bank zero and check CF01.
+* >8358 keeps the filename pointer so every directory comparison restarts.
 ISLOAD CEQ 5,@>834A
        BR BADOP
        CEQ >2E,V*>8356
@@ -41,6 +52,8 @@ ISLOAD CEQ 5,@>834A
        DCH 510,@>835C
        BS NOFILE
        DST >6020,@>835A
+* Directory search: compare the requested name with each 16-byte entry.
+* A shorter name must end at a space, so PIRATE cannot match PIRATE2.
 NEXT   DST @>8358,@>8356
        DADD 5,@>8356
        DCLR @>835E
@@ -65,6 +78,8 @@ SKIP   DSUB @>835E,@>835A
        DCZ @>835C
        BR NEXT
        B NOFILE
+* Found: check the file length against the caller's capacity and VDP end.
+* Convert bank/offset fields into the CPU bank-select and data addresses.
 FOUND  DSUB @>835E,@>835A
        DST @>000A(@>5A),@>834E
        DCH @>8350,@>834E
@@ -99,6 +114,9 @@ COPY   MOVE @>8350,@>0000(@>5A),V*>834C
        DCZ @>834E
        BR RDLOOP
        B DONE
+* Failure paths set the TI error bits in the caller's PAB.
+* All exits, including errors, restore ROM bank zero and return through
+* the console GPL DSR return routine. No UBE1 cleanup is needed here.
 BADOP  OR >60,V@>FFF7(@>58)
        B DONE
 NOFILE OR >E0,V@>FFF7(@>58)

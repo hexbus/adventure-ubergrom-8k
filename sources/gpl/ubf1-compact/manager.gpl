@@ -6,6 +6,11 @@
 * VDP: catalog PAB0040, copy PABs1200/1240, marks1300, message1340,
 * directory1400, data2000. Hide the screen while the catalog PAB is visible.
 * Included in the service GROM; the single header links both entry points.
+* Included by ube1.gpl; this file includes basic-cat.gpl at its end.
+* CATDRAW calls shared CATREADDIR/CATTABLE; numeric display helpers here
+* are also used by BASIC CAT. Removing either UI source needs refactoring.
+* CATSOURCE/CATDEST call the console DSR scanner, which finds UBE1 or the
+* user's destination device. External copies need that device's own DSR.
 PREFIXLEN EQU 5
 CATPROG DATA 0,CATSTART
        STRI 'SAVED GAMES'
@@ -117,6 +122,8 @@ CATUNMARK CLR V*>832C
        DADD 30,@>8328
        ST >20,V*>8328
        B CATWAIT
+* Execute the marks only when X is pressed. Keep a failed operation's
+* mark so the user can see which action did not finish.
 CATEXEC CZ @>833C
        BR CATWAIT
        CLR @>832E
@@ -213,6 +220,9 @@ CATBACK CZ @>833B
        DDEC @>8332
        ST >20,V*>8332
        B CATINPUT
+* Copy routing: UBE1 destinations use private CLONE (opcode 12), keeping
+* the native file attributes. Other devices use PROGRAM LOAD/SAVE or
+* record OPEN/READ/WRITE/CLOSE, according to the source file type.
 CATCONFIRM CZ @>833B
        BS CATCOPYCANCEL
        ST @>833B,V@>1249

@@ -6,6 +6,16 @@
 * CPU scratch >834A->835F only; console GPL stack/interpreter own other bytes.
 * >834A saved GROM base, >834C name pointer; >834E->835F temporaries.
 * Caller VDP is preserved except the PAB and the requested READ/LOAD output.
+*
+* This is the top-level assembly for the 8K service GROM. It includes
+* records.gpl (which includes directory.gpl), scratch.gpl, and manager.gpl
+* (which includes basic-cat.gpl). They share labels and RAM definitions;
+* they are source sections of one image, not independent DSR binaries.
+* ROM1's 318-byte loader is assembled separately and does not call us.
+*
+* Header entry points: ENTRY handles UBE1 file requests, POWERUP resets
+* volatile handles, CATPROG launches the manager, BCLIST exposes BASIC CAT.
+* File requests do not run the UI. BASIC DELETE reaches opcode 7 here.
        .IFNDEF DRIVERBASE
 DRIVERBASE EQU >8000
        .ENDIF
@@ -174,6 +184,9 @@ SELECTD MOVE 2,G@BEST,@>8350
        CZ @>835F
        BR BADIO
        CALL SELECT
+* Dispatch after mounting: PROGRAM LOAD is handled below; SAVE/DELETE
+* use MUTATE; record operations live in records.gpl. Private opcodes 11/12
+* supply catalog metadata and same-device copies to the UI.
 READY
        CEQ 11,V@>FFF6(@>4C)
        BS DIRECTORY
@@ -456,6 +469,8 @@ METASZ MOVE 2,G@LPTR,@>8354
        B COMMIT
 
 * Allocate one previously unreachable AU. Never reuse an active metadata/data AU.
+* Allocation uses MARKS from SCANROOT plus blocks claimed in this save.
+* This is shared by file-data and descriptor writes, not by ROM1 loads.
 ALLOC  MOVE 2,G@ALNEXT,@>8352
        DCH 119,@>8352
        BS ALFAIL
@@ -491,6 +506,9 @@ BEGINWRITE CALL LOCK
        RTN
 * Publish the new directory last: write its body, then its >A5 commit byte.
 * This is bounded replacement, not a promise about arbitrary power failures.
+* Publish the replacement directory only after the new file is written.
+* SAVE and DELETE both come here; DELETE changes a directory slot without
+* erasing the old payload. Future allocation can reuse unreferenced blocks.
 COMMIT DST NEWROOT,@>8350
        DST 26,@>8352
        CALL CRC
@@ -603,6 +621,8 @@ ROOTCK MOVE 2,G@ROOT,@>8350
        BR ROOTBAD
        B ROOTGOOD
 * Build the allocation marks and find the requested name during one scan.
+* Build the in-use block map, count files and find the requested name.
+* SAVE allocation and directory.gpl's free-space count rely on this map.
 SCANROOT MOVE 120,G@ZEROS,G@MARKS
        MOVE 3,G@ZEROS,G@NLEN+1
        MOVE 2,G@ZEROS,G@RMATCH
@@ -862,6 +882,7 @@ CRC4   DCLR @>835A
        DXOR @>8358,@>8354
        DXOR @>835A,@>8356
        RTN
+* Record service and private directory request share the writer above.
        COPY "records.gpl"
 CRCTAB DATA >0000,>0000,>1DB7,>1064,>3B6E,>20C8,>26D9,>30AC
        DATA >76DC,>4190,>6B6B,>51F4,>4DB2,>6158,>5005,>713C
@@ -897,6 +918,8 @@ RETURN CALL LOCK
        DST @>834A,@>83FA
        DCLR @>6000
        CALL >0012
+* User interfaces follow the DSR core. manager.gpl also includes BASIC CAT.
+* Both use console DSR calls for UBE1 operations; neither edits EEPROM.
        COPY "manager.gpl"
 * Unreferenced attribution for our DSR/file-manager additions only.
 * Stored after all code/data; original Adventure and Tursi firmware unchanged.

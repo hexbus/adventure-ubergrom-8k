@@ -3,6 +3,10 @@
 * Small common helpers keep repeated GPL sequences out of the 8K image.
 * Shared scratch/descriptor access helpers. No persistent state is changed
 * beyond the explicit instruction operands; >834A and >834C remain intact.
+* Included by ube1.gpl; core, record and directory routines call these.
+* They use the shared RAM symbols from that assembly, not ROM1's scratch.
+* RECADDR is for the open record buffer; SETREFS/NEXTAU (in ube1.gpl)
+* walk a mounted file's data-block list; ADVANCE updates a LOAD cursor.
 READGBYTE   MOVE 1,G@>0000(@>50),@>835F
        RTN
 READAUID    DCLR @>8352

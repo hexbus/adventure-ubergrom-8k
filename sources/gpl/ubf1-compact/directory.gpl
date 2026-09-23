@@ -5,6 +5,11 @@
 * Compact catalog: private metadata, rendered by the shared menu/CALL CAT.
 * Private opcode 11 returns a 32-byte summary and sixteen 32-byte entries.
 * It is used by the manager for exact byte lengths and TI attributes.
+* Included through records.gpl. UBE1 ENTRY mounts/scans the filesystem
+* before dispatching here. CATREADDIR in basic-cat.gpl issues opcode 11
+* for both menu and BASIC; CATTABLE draws the returned data afterward.
+* SPACEINFO is also called by SAVE preflight and STATUS, so this file is
+* part of the file service as well as supporting the catalog display.
 CATPTR EQU >70C0
 CATNUM EQU >70C2
 CATFREE EQU >70C4
@@ -31,6 +36,8 @@ SPACEUSED DINC @>8350
        MOVE 1,G@NCOUNT,G@CATCOUNT+1
        RTN
 
+* Copy a summary plus 16 rows to the caller's VDP buffer (544 bytes).
+* These rows describe files; they are not sectors or raw EEPROM blocks.
 DIRECTORY MOVE 2,G@PAB+2,@>8350
        DCH >3DE0,@>8350
        BS NOSPACE
