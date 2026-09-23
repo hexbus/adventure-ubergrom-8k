@@ -31,12 +31,12 @@
       "sha256": "8c5d9a07133f5abd7d16d93c2f188f28ed11918004e22bbb604fbe44665ac166"
     },
     "README.md": {
-      "bytes": 2455,
-      "sha256": "923729beaffeeb3cbca6744b517855c95e527a0cd607dc9bfd474be1bc2f9cda"
+      "bytes": 3003,
+      "sha256": "3e39eada799aaa70102a9c41fd9915af7a65a018c1e9fa905c874ba166e1d8a0"
     },
     "docs/building.md": {
-      "bytes": 4030,
-      "sha256": "fb9b779710d2495ac60013bca510604af3309e182bd0b2cb22908bf740bd6adc"
+      "bytes": 4028,
+      "sha256": "2c1e13001e40c6fea081511c8826e3560dab7c67e500b8b9469c706cf7830cc5"
     },
     "docs/code-guide.md": {
       "bytes": 9845,
@@ -51,8 +51,8 @@
       "sha256": "8c4d77a2ae36b2f920df42a8b6bd19d28ac01fd9347bb96c40625fbe79313e9e"
     },
     "docs/verification.md": {
-      "bytes": 2177,
-      "sha256": "271c3055efaa553acbeec0aded1446bdd8c4cc5d459e5672bfaa77117e760a92"
+      "bytes": 2173,
+      "sha256": "a744c9a3804c6814e3eea7399d92bd84b1522cdbd7819366d3157bd53eaa4cf2"
     },
     "examples/adventures.json": {
       "bytes": 103,
