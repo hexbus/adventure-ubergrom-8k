@@ -1,0 +1,75 @@
+* Copyright (c) 2026 hexbus.
+* SPDX-License-Identifier: Apache-2.0
+* This private request supplies both UI entry points. It does not emulate
+* physical disk sectors or the disk manager IF38 catalog protocol.
+* Compact catalog: private metadata, rendered by the shared menu/CALL CAT.
+* Private opcode 11 returns a 32-byte summary and sixteen 32-byte entries.
+* It is used by the manager for exact byte lengths and TI attributes.
+CATPTR EQU >70C0
+CATNUM EQU >70C2
+CATFREE EQU >70C4
+CATCOUNT EQU >70C6
+CATDIR EQU >70C8
+CATINDEX EQU >70CA
+CATVALUES EQU >70D0
+
+* The compact catalog interface is CALL CAT; no separate IF38 file.
+CATALOG B BADOP
+
+* Count unused allocation units from the selected directory scan.
+SPACEINFO MOVE 4,G@ZEROS,G@CATFREE
+       DST 2,@>8350
+       DCLR @>8352
+SPACELOOP MOVE 1,G@MARKS(@>50),@>835F
+       CZ @>835F
+       BR SPACEUSED
+       DINC @>8352
+SPACEUSED DINC @>8350
+       DCH 119,@>8350
+       BR SPACELOOP
+       MOVE 2,@>8352,G@CATFREE
+       MOVE 1,G@NCOUNT,G@CATCOUNT+1
+       RTN
+
+DIRECTORY MOVE 2,G@PAB+2,@>8350
+       DCH >3DE0,@>8350
+       BS NOSPACE
+       MOVE 2,@>8350,G@CATPTR
+       CALL SPACEINFO
+       MOVE 2,G@CATPTR,@>8350
+       MOVE 32,G@ZEROS,V*>8350
+       MOVE 4,G@HSIGN,V*>8350
+       DADD 4,@>8350
+       DST 118,V*>8350
+       DADD 2,@>8350
+       MOVE 2,G@CATFREE,V*>8350
+       DADD 2,@>8350
+       MOVE 2,G@CATCOUNT,V*>8350
+       MOVE 2,G@CATPTR,@>8350
+       DADD 32,@>8350
+       MOVE 2,@>8350,G@CATPTR
+       MOVE 2,G@BEST,@>8350
+       DADD 9,@>8350
+       MOVE 2,@>8350,G@CATDIR
+DIRECTLP MOVE 2,G@CATPTR,@>8354
+       MOVE 32,G@ZEROS,V*>8354
+       MOVE 2,G@CATDIR,@>8350
+       CALL READAUID
+       CEQ 255,@>8353
+       BS DIRECTNEXT
+       CALL AUADDR
+       CALL SETHEAD
+       CALL GETMETA
+       MOVE 2,G@CATPTR,@>8354
+       MOVE 24,G@META,V*>8354
+DIRECTNEXT MOVE 2,G@CATPTR,@>8350
+       DADD 32,@>8350
+       MOVE 2,@>8350,G@CATPTR
+       MOVE 2,G@CATDIR,@>8350
+       DINC @>8350
+       MOVE 2,@>8350,G@CATDIR
+       MOVE 2,G@BEST,@>8352
+       DADD 25,@>8352
+       DCEQ @>8352,@>8350
+       BR DIRECTLP
+       B DONE

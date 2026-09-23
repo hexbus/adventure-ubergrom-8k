@@ -1,0 +1,31 @@
+Adventure UberGROM 8K
+Copyright 2026 hexbus.
+
+Project: https://github.com/hexbus
+Website: https://www.hexbus.com
+
+Thanks to Mike Brent (Tursi) for UberGROM, its firmware, documentation and
+the GROM mapping advice, and to Fred for the original ROM disk discussions.
+
+Original Adventure code and adventure databases retain their authorship
+and rights. They are not included in the public release preparation.
+Users supply those inputs themselves.
+
+UberGROM firmware is by Mike Brent / Tursi and is also supplied by the user.
+It is not modified by this project's builder. Follow the notices in its
+original distribution: https://github.com/tursilion/ubergrom
+Author's website: https://www.harmlesslion.com
+
+xdt99 is an external tool by Ralph Benzinger:
+https://github.com/endlos99/xdt99
+
+Original project code, tooling and the compiled ROM1/UBE1 components are
+licensed under Apache License 2.0 (LICENSE-CODE.txt). Original documentation
+is licensed CC BY 4.0 (LICENSE-DOCUMENTATION.md). See LICENSE.md for scope.
+Retain the applicable attribution and license notices when redistributing.
+This notice does not grant rights to third-party code or data.
+
+Creator's request: please retain the embedded "2026 Hexbus" ROM signature
+when using or adapting the UBE1 GROM, so its origin remains identifiable.
+This is an attribution-preservation request, not an additional restriction
+on the permissions granted by Apache License 2.0.

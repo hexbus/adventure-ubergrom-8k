@@ -1,0 +1,7 @@
+local-inputs/
+local-reference/
+output/
+github-release/
+node_modules/
+__pycache__/
+*.pyc

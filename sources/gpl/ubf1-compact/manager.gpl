@@ -1,0 +1,385 @@
+* Copyright (c) 2026 hexbus.
+* SPDX-License-Identifier: Apache-2.0
+* The menu only lists, marks, copies and deletes. D/C change marks; X
+* performs the selected operations through DSR calls, not direct EEPROM edits.
+* UBF1 file manager. DSR work goes through the console scanner.
+* VDP: catalog PAB0040, copy PABs1200/1240, marks1300, message1340,
+* directory1400, data2000. Hide the screen while the catalog PAB is visible.
+* Included in the service GROM; the single header links both entry points.
+PREFIXLEN EQU 5
+CATPROG DATA 0,CATSTART
+       STRI 'SAVED GAMES'
+* Own the keyboard mode instead of inheriting the title scanner's default.
+* Use the console's compact upper-case font, at the ASCII 32 pattern address.
+CATSTART MOVE 1,G@CATBLANK,#1
+       ST 3,@>8374
+       DST >0900,@>834A
+       CALL >0018
+       MOVE 16,G@CATZERO,V@>1300
+       MOVE 32,G@CATSPACES,V@>1340
+       DCLR @>832A
+       DST 96,@>8334
+* Startup only: drain keys held while selecting the menu. CATDRAW must not
+* re-arm this after an action or a copy prompt.
+       ST 1,@>833A
+       DCLR @>6000
+CATDRAW MOVE 1,G@CATBLANK,#1
+       ALL 32
+       BACK 4
+       MOVE CATHEAD-CATTITLE,G@CATTITLE,V@5
+       MOVE 32,V@>1340,V@608
+       CLR @>833D
+       DST >1400,@>8332
+       CALL CATREADDIR
+* Clear the entire temporary PAB, including the opcode at column zero.
+* Also needed on the directory-error path, which does not draw a header.
+       MOVE 16,G@CATSPACES,V@>40
+       CZ @>835F
+       BR CATNOMAP
+       CLR @>833C
+       MOVE CATPREFIX-CATHEAD,G@CATHEAD,V@65
+       DST >1420,@>8332
+       DST 97,@>8320
+       CALL CATTABLE
+       MOVE CATMAPERR-CATCOUNTTEXT,G@CATCOUNTTEXT,V@33
+       ST V@>1409,@>8324
+       CALL CATDEC
+       MOVE 2,@>8326,V@33
+       ST V@>1407,@>8324
+       CALL CATDEC
+       MOVE 3,@>8325,V@49
+       ST >3E,V*>8334
+       B CATFOOTER
+CATNOMAP ST 1,@>833C
+       MOVE CATKEY1-CATMAPERR,G@CATMAPERR,V@161
+CATFOOTER MOVE CATKEY2-CATKEY1,G@CATKEY1,V@673
+       MOVE CATKEY3-CATKEY2,G@CATKEY2,V@705
+       MOVE CATKEYEND-CATKEY3,G@CATKEY3,V@746
+       MOVE 1,G@CATSHOW,#1
+CATWAIT CZ @>833A
+       BS CATKEY
+       SCAN
+       CEQ >FF,@>8375
+       BR CATWAIT
+       CLR @>833A
+CATKEY SCAN
+       BR CATWAIT
+       CEQ 13,@>8375
+       BS CATQUIT
+       CEQ 11,@>8375
+       BS CATUP
+       CEQ >45,@>8375
+       BS CATUP
+       CEQ 10,@>8375
+       BS CATDOWN
+       CEQ >53,@>8375
+       BS CATDOWN
+       CEQ >44,@>8375
+       BS CATMARK
+       CEQ >43,@>8375
+       BS CATMARK
+       CEQ >58,@>8375
+       BS CATEXEC
+       B CATWAIT
+CATQUIT EXIT
+CATUP  DCZ @>832A
+       BS CATWAIT
+       ST >20,V*>8334
+       DDEC @>832A
+       DSUB 32,@>8334
+       ST >3E,V*>8334
+       B CATWAIT
+CATDOWN DCEQ 15,@>832A
+       BS CATWAIT
+       ST >20,V*>8334
+       DINC @>832A
+       DADD 32,@>8334
+       ST >3E,V*>8334
+       B CATWAIT
+CATMARK CZ @>833C
+       BR CATWAIT
+       ST @>8375,@>8339
+       ST @>832B,@>8324
+       CALL CATRECORD
+       CZ V*>8350
+       BS CATWAIT
+       DST >1300,@>832C
+       DADD @>832A,@>832C
+       CEQ @>8339,V*>832C
+       BS CATUNMARK
+       ST @>8339,V*>832C
+       DST @>8334,@>8328
+       DADD 30,@>8328
+       ST @>8339,V*>8328
+       B CATWAIT
+CATUNMARK CLR V*>832C
+       DST @>8334,@>8328
+       DADD 30,@>8328
+       ST >20,V*>8328
+       B CATWAIT
+CATEXEC CZ @>833C
+       BR CATWAIT
+       CLR @>832E
+       MOVE 32,G@CATSPACES,V@>1340
+CATBATCH DCLR @>832C
+       ST @>832E,@>832D
+       DADD >1300,@>832C
+       ST V*>832C,@>8339
+       CZ @>8339
+       BS CATBNEXT
+       ST @>832E,@>8324
+       CALL CATRECORD
+       CZ V*>8350
+       BS CATBCLEAR
+       CEQ >44,@>8339
+       BR CATBCOPY
+       CALL CATDELETE
+       B CATRESULT
+CATBCOPY CALL CATCOPY
+CATRESULT CZ @>835F
+       BR CATDRAW
+CATBCLEAR DCLR @>832C
+       ST @>832E,@>832D
+       DADD >1300,@>832C
+       CLR V*>832C
+CATBNEXT INC @>832E
+       CEQ 16,@>832E
+       BR CATBATCH
+       MOVE CATDONEEND-CATDONE,G@CATDONE,V@>1340
+       B CATDRAW
+* Slot number in >8324; returns VDP directory entry >8350.
+CATRECORD DST >1420,@>8350
+CATRECLP CZ @>8324
+       BS CATRECRET
+       DADD 32,@>8350
+       DEC @>8324
+       B CATRECLP
+CATRECRET RTN
+* Construct the source PAB from the validated directory entry.
+CATPAB MOVE 16,G@CATZERO,V@>1200
+       DST >2000,V@>1202
+       DST V@12(@>50),V@>1206
+       ST V@10(@>50),@>8336
+       ST V@21(@>50),@>8337
+       MOVE 5,G@CATPREFIX,V@>120A
+       MOVE 10,V*>8350,V@>120F
+       DST 10,@>8352
+CATPTRIM CEQ 32,V@>120E(@>52)
+       BR CATPNAME
+       DDEC @>8352
+       B CATPTRIM
+CATPNAME ADD 5,@>8353
+       ST @>8353,V@>1209
+       RTN
+CATDELETE CALL CATPAB
+       ST 7,V@>1200
+       CALL CATSOURCE
+       CZ @>835F
+       BS CATDELRET
+       MOVE CATERRC-CATERRD,G@CATERRD,V@>1340
+CATDELRET RTN
+CATCOPY CALL CATPAB
+       MOVE 16,G@CATZERO,V@>1240
+       DST >2000,V@>1242
+       ALL 32
+       MOVE CATCOPYTITLEEND-CATCOPYTITLE,G@CATCOPYTITLE,V@65
+       MOVE PREFIXLEN+10,V@>120A,V@129
+       MOVE CATINPUTHELP-CATPROMPT,G@CATPROMPT,V@193
+       MOVE CATCOPYTITLE-CATINPUTHELP,G@CATINPUTHELP,V@353
+       CLR @>833B
+       DST 257,@>8332
+CATINPUT SCAN
+       BR CATINPUT
+       CEQ 13,@>8375
+       BS CATCONFIRM
+       CEQ 8,@>8375
+       BS CATBACK
+       CH 31,@>8375
+       BR CATINPUT
+       CH 95,@>8375
+       BS CATINPUT
+       CH 29,@>833B
+       BS CATINPUT
+       DCLR @>8354
+       ST @>833B,@>8355
+       ST @>8375,V@>124A(@>54)
+       ST @>8375,V*>8332
+       INC @>833B
+       DINC @>8332
+       B CATINPUT
+CATBACK CZ @>833B
+       BS CATINPUT
+       DEC @>833B
+       DDEC @>8332
+       ST >20,V*>8332
+       B CATINPUT
+CATCONFIRM CZ @>833B
+       BS CATCOPYCANCEL
+       ST @>833B,V@>1249
+       DCEQ >5542,V@>124A
+       BR CATEXTERNAL
+       DCEQ >4531,V@>124C
+       BR CATEXTERNAL
+       CEQ >2E,V@>124E
+       BR CATEXTERNAL
+       ST 12,V@>1200
+       DST >1249,V@>1202
+       CALL CATSOURCE
+       CZ @>835F
+       BR CATCOPYERR
+       RTN
+CATEXTERNAL
+       ST @>8336,@>835F
+       AND 1,@>835F
+       CZ @>835F
+       BS CATCOPYRECORDS
+       ST 5,V@>1200
+       CALL CATSOURCE
+       CZ @>835F
+       BR CATCOPYERR
+       ST 6,V@>1240
+       DST V@>1206,V@>1246
+       CALL CATDEST
+       CZ @>835F
+       BR CATCOPYERR
+       RTN
+CATCOPYRECORDS ST @>8336,@>835F
+       AND >80,@>835F
+       SRL 3,@>835F
+       ST @>8336,@>835E
+       AND 2,@>835E
+       SLL 2,@>835E
+       OR @>835E,@>835F
+       ST @>835F,V@>1201
+       ST @>835F,V@>1241
+       OR 4,V@>1201
+       OR 2,V@>1241
+       ST @>8337,V@>1204
+       ST @>8337,V@>1244
+       DCLR V@>1206
+       CALL CATSOURCE
+       CZ @>835F
+       BR CATCOPYERR
+       CALL CATDEST
+       CZ @>835F
+       BR CATCLOSESOURCE
+CATCOPYLOOP ST 2,V@>1200
+       CALL CATSOURCE
+       CEQ >A0,@>835F
+       BS CATCOPYEND
+       CZ @>835F
+       BR CATCOPYABORT
+       ST V@>1205,V@>1245
+       ST 3,V@>1240
+       CALL CATDEST
+       CZ @>835F
+       BR CATCOPYABORT
+       B CATCOPYLOOP
+CATCOPYEND ST 1,V@>1240
+       CALL CATDEST
+       CZ @>835F
+       BR CATCOPYABORT
+       ST 1,V@>1200
+       CALL CATSOURCE
+       CZ @>835F
+       BR CATCOPYERR
+       RTN
+CATCOPYABORT ST 1,V@>1240
+       DCEQ >5542,V@>124A
+       BR CATCOPYCLEAN
+       DCEQ >4531,V@>124C
+       BR CATCOPYCLEAN
+       ST 10,V@>1240
+CATCOPYCLEAN CALL CATDEST
+CATCLOSESOURCE ST 1,V@>1200
+       CALL CATSOURCE
+       B CATCOPYERR
+CATSOURCE DST >1209,@>8356
+       CALL >0010
+       BYTE >08
+       BS CATIOFAIL
+       ST V@>1201,@>835F
+       AND >E0,@>835F
+       RTN
+CATDEST DST >1249,@>8356
+       CALL >0010
+       BYTE >08
+       BS CATIOFAIL
+       ST V@>1241,@>835F
+       AND >E0,@>835F
+       RTN
+CATIOFAIL ST >C0,@>835F
+       RTN
+
+CATCOPYCANCEL MOVE CATDONE-CATCANCEL,G@CATCANCEL,V@>1340
+       ST 1,@>835F
+       RTN
+CATCOPYERR CEQ >80,@>835F
+       BR CATCOPYOTHER
+       MOVE CATFULLEND-CATFULLERR,G@CATFULLERR,V@>1340
+       B CATCOPYFAILED
+CATCOPYOTHER CEQ >20,@>835F
+       BR CATCOPYGENERIC
+       MOVE CATPROTEND-CATPROTERR,G@CATPROTERR,V@>1340
+       B CATCOPYFAILED
+CATCOPYGENERIC MOVE CATCANCEL-CATERRC,G@CATERRC,V@>1340
+CATCOPYFAILED
+       ST 1,@>835F
+       RTN
+* Decimal word >8324->four ASCII digits >8325..>8328.
+CATWORD DST @>8324,@>835C
+       ST >30,@>8325
+CATTHOU DCH 999,@>835C
+       BR CATHUND
+       DSUB 1000,@>835C
+       INC @>8325
+       B CATTHOU
+CATHUND ST >30,@>8326
+CATHLP DCH 99,@>835C
+       BR CATWTENS
+       DSUB 100,@>835C
+       INC @>8326
+       B CATHLP
+CATWTENS ST >30,@>8327
+CATWTLP DCH 9,@>835C
+       BR CATWONES
+       DSUB 10,@>835C
+       INC @>8327
+       B CATWTLP
+CATWONES ST >30,@>8328
+       ADD @>835D,@>8328
+       RTN
+* Decimal byte >8324 -> three ASCII digits >8325->8327.
+CATDEC ST @>8324,@>8325
+       CLR @>8324
+       CALL CATWORD
+       MOVE 3,@>8326,@>8325
+       RTN
+CATTITLE TEXT 'UBE1 FILE MANAGER'
+CATHEAD TEXT 'FILE       TYPE         BYTES *'
+CATPREFIX TEXT 'UBE1.'
+CATCOUNTTEXT TEXT '00 FILES        000 BLOCKS FREE'
+CATMAPERR TEXT 'UBE1 STORAGE NOT READY'
+CATKEY1 TEXT 'E/S:MOVE            ENTER:EXIT'
+CATKEY2 TEXT 'D:MARK DELETE      C:MARK COPY'
+CATKEY3 TEXT 'X:DO MARKED'
+CATKEYEND
+CATERRD TEXT 'DELETE FAILED - MARK KEPT'
+CATERRC TEXT 'COPY FAILED - MARK KEPT'
+CATCANCEL TEXT 'COPY CANCELED - MARK KEPT'
+CATDONE TEXT 'DONE - MARKED ACTIONS COMPLETED'
+CATDONEEND
+CATFULLERR TEXT 'NO SPACE - OLD FILE RETAINED'
+CATFULLEND
+CATPROTERR TEXT 'PROTECTED - MARK KEPT'
+CATPROTEND
+CATPROMPT TEXT 'DESTINATION (E.G. DSK1.PIRATE):'
+CATINPUTHELP TEXT 'ENTER TO COPY; BLANK TO CANCEL'
+CATCOPYTITLE TEXT 'COPY SAVE'
+CATCOPYTITLEEND
+CATZERO EQU ZEROS
+CATSPACES TEXT '                                '
+* Graphics mode, interrupts on; console preserves the VDP memory-size bit.
+CATBLANK BYTE >20
+CATSHOW BYTE >60
+       COPY 'basic-cat.gpl'

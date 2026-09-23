@@ -1,0 +1,29 @@
+* Copyright (c) 2026 hexbus.
+* SPDX-License-Identifier: Apache-2.0
+* Small common helpers keep repeated GPL sequences out of the 8K image.
+* Shared scratch/descriptor access helpers. No persistent state is changed
+* beyond the explicit instruction operands; >834A and >834C remain intact.
+READGBYTE   MOVE 1,G@>0000(@>50),@>835F
+       RTN
+READAUID    DCLR @>8352
+       MOVE 1,G@>0000(@>50),@>8353
+       RTN
+GETHANDLE   MOVE 2,G@HPTR,@>8350
+       RTN
+SETHEAD     MOVE 2,@>8350,G@HEAD
+       RTN
+GETLEFT     MOVE 2,G@DLEFT,@>8352
+       RTN
+SETREFS     DST META+24,@>8350
+       MOVE 2,@>8350,G@REFPTR
+       RTN
+RECADDR     MOVE 2,G@CTX+2,@>8350
+       MOVE 2,G@RBYTE,@>8352
+       DADD @>8352,@>8350
+       RTN
+ADVANCE     DADD @>8352,@>8354
+       MOVE 2,@>8354,G@DPTR
+       MOVE 2,G@DLEFT,@>8354
+       DSUB @>8352,@>8354
+       MOVE 2,@>8354,G@DLEFT
+       RTN

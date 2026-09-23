@@ -1,0 +1,904 @@
+* Copyright (c) 2026 hexbus.
+* SPDX-License-Identifier: Apache-2.0
+* Compact UBE1 file service: one open record file, direct EEPROM reads.
+* No formatting or firmware modification. Protected EEPROM is never written.
+* Default GROM >8000; EEPROM >A000. Private RAM on base 14 (>9838).
+* CPU scratch >834A->835F only; console GPL stack/interpreter own other bytes.
+* >834A saved GROM base, >834C name pointer; >834E->835F temporaries.
+* Caller VDP is preserved except the PAB and the requested READ/LOAD output.
+       .IFNDEF DRIVERBASE
+DRIVERBASE EQU >8000
+       .ENDIF
+       GROM DRIVERBASE
+       AORG 0
+       DATA >AA01,0,POWERLIST,CATPROG,DSRLST,BCLIST,0,0
+DSRLST DATA 0,ENTRY
+       STRI 'UBE1'
+POWERLIST DATA 0,POWERUP
+* Owned RAM: one record buffer and bounded directory/operation scratch.
+* EEPROM is read directly; no full-volume snapshot or block deduplication.
+ROOT   EQU >7000
+BEST   EQU >7002
+BGEN   EQU >7004
+CGEN   EQU >7008
+DIRPTR EQU >700C
+MATCH  EQU >7010
+RMATCH EQU >7012
+HEAD   EQU >7014
+MLEN   EQU >7016
+NLEN   EQU >7018
+NCOUNT EQU >7019
+PAB    EQU >7020
+MPTR   EQU >7048
+MLEFT  EQU >704A
+CHAIN  EQU >704C
+DPTR   EQU >704E
+DLEFT  EQU >7050
+REFPTR EQU >7052
+NEXTP  EQU >7054
+LOGLEFT EQU >7058
+RECLEFT EQU >705A
+MAXREC EQU >705C
+ISVAR  EQU >705D
+WROOT  EQU >7060
+WSLOT  EQU >7062
+WLEN   EQU >7064
+WVDP   EQU >7066
+WLEFT  EQU >7068
+WREF   EQU >706A
+WCOUNT EQU >706C
+SCANID EQU >706E
+FIRST  EQU >7070
+PREV   EQU >7072
+LLEFT  EQU >7074
+LPTR   EQU >7076
+WRITEPTR EQU >7078
+WRLEFT EQU >707A
+WRTO   EQU >707C
+WCRC   EQU >7080
+ALNEXT EQU >7096
+META   EQU >7100
+MARKS  EQU >7200
+NEWROOT EQU >7400
+NEWMETA EQU >7420
+NEWBLOCK EQU >74C0
+
+* ENTRY: the console passes a PAB (file request) in VDP memory. Save its
+* caller base before switching to base 14 for our code/RAM/EEPROM view.
+ENTRY  DST @>8356,@>834C
+       DSUB @>8354,@>834C
+       AND >1F,V@>FFF7(@>4C)
+       DST @>83FA,@>834A
+       DST >9838,@>83FA
+       CH 12,V@>FFF6(@>4C)
+       BS BADOP
+       CEQ 8,V@>FFF6(@>4C)
+       BS BADOP
+OPVALID CEQ >2E,V@4(@>4C)
+       BR NOFILE
+       ST V@>FFFF(@>4C),@>835F
+       CH 4,@>835F
+       BR NOFILE
+       CH 15,@>835F
+       BS NOFILE
+* Require the explicit experimental profile before touching its RAM.
+       MOVE 2,G@>A000,@>8350
+       DCEQ >05FA,@>8350
+       BR BADIO
+       MOVE 1,G@>A0E7,@>835F
+       CEQ >20,@>835F
+       BR BADIO
+       MOVE 1,G@>A0EF,@>835F
+       CEQ >DF,@>835F
+       BR BADIO
+       MOVE 1,G@>A0E5,@>835F
+       CZ @>835F
+       BR BADIO
+       MOVE 1,G@>A0ED,@>835F
+       CEQ >FF,@>835F
+       BR BADIO
+       CALL HINIT
+       MOVE 10,V@>FFF6(@>4C),G@PAB
+       MOVE 1,G@ZEROS,G@SOURCE
+       MOVE 10,G@SPACES,G@REQNAME
+       DCLR @>8352
+       ST V@>FFFF(@>4C),@>8353
+       DSUB 5,@>8352
+       DST @>834C,@>8350
+       DADD 5,@>8350
+       DCZ @>8352
+       BS REQNAMED
+       MOVE @>8352,V*>8350,G@REQNAME
+REQNAMED CALL INPUTNAME
+       CZ @>835F
+       BR NOFILE
+       CALL HLOOK
+       CEQ 0,V@>FFF6(@>4C)
+       BS MOUNT
+       CEQ 9,V@>FFF6(@>4C)
+       BS MOUNT
+       CH 4,V@>FFF6(@>4C)
+       BS NONREC
+       B RECORD
+NONREC CEQ 10,V@>FFF6(@>4C)
+       BS RECORD
+       CEQ 11,V@>FFF6(@>4C)
+       BS MOUNT
+       CALL GETHANDLE
+       DCZ @>8350
+       BR BADOP
+MOUNT
+       MOVE 40,G@ZEROS,G@ROOT
+       MOVE 10,V@>FFF6(@>4C),G@PAB
+       ST V@>FFFF(@>4C),@>835F
+       SUB 5,@>835F
+       MOVE 1,@>835F,G@NLEN
+* Mount both directory roots and select the valid newer generation.
+* The older root remains available until a replacement commits.
+MOUNTROOTS DST >A102,@>8350
+       MOVE 2,@>8350,G@ROOT
+       CALL ROOTCK
+       CZ @>835F
+       BR SECOND
+       CALL SELECT
+SECOND DST >A121,@>8350
+       MOVE 2,@>8350,G@ROOT
+       CALL ROOTCK
+       CZ @>835F
+       BR SELECTD
+       MOVE 2,G@BEST,@>8350
+       DCZ @>8350
+       BS USECUR
+* Compare the full 32-bit generation difference modulo 2^32.
+       MOVE 4,G@CGEN,@>8350
+       MOVE 4,G@BGEN,@>8354
+       DCH @>8352,@>8356
+       BR NOBORR
+       DDEC @>8350
+NOBORR DSUB @>8354,@>8350
+       DSUB @>8356,@>8352
+       DCZ @>8352
+       BR GENHIGH
+       DCZ @>8350
+       BS AMBIGUOUS
+       DCEQ >8000,@>8350
+       BS AMBIGUOUS
+GENHIGH DCH >7FFF,@>8350
+       BS SELECTD
+USECUR CALL SELECT
+SELECTD MOVE 2,G@BEST,@>8350
+       DCZ @>8350
+       BS BADIO
+       MOVE 2,G@BEST,G@ROOT
+       CALL SCANROOT
+       CZ @>835F
+       BR BADIO
+       CALL SELECT
+READY
+       CEQ 11,V@>FFF6(@>4C)
+       BS DIRECTORY
+       CEQ 12,V@>FFF6(@>4C)
+       BS CLONE
+       CEQ 0,V@>FFF6(@>4C)
+       BS OPEN
+       CEQ 9,V@>FFF6(@>4C)
+       BS STATUS
+       CEQ 5,V@>FFF6(@>4C)
+       BR MUTATE
+       MOVE 2,G@MATCH,@>8350
+       DCZ @>8350
+       BS NOFILE
+* Read the selected descriptor from EEPROM after the directory check.
+       CALL SETHEAD
+       CALL GETMETA
+       CZ @>835F
+       BR BADIO
+       MOVE 2,G@META+10,@>8350
+       AND >F7,@>8350
+       CEQ 1,@>8350
+       BR BADOP
+       CZ @>8351
+       BR BADOP
+       MOVE 2,G@META+12,@>8350
+       MOVE 2,G@PAB+6,@>8352
+       DCH @>8352,@>8350
+       BS NOSPACE
+       MOVE 2,G@PAB+2,@>8352
+       DCH >3FFF,@>8352
+       BS NOSPACE
+       DST @>8352,@>8354
+       DADD @>8350,@>8354
+       DCH >4000,@>8354
+       BS NOSPACE
+       MOVE 2,@>8350,G@DLEFT
+       MOVE 2,@>8352,G@DPTR
+       CALL SETREFS
+LOADLP CALL GETLEFT
+       DCZ @>8352
+       BS DONE
+       CALL NEXTAU
+       CALL GETLEFT
+       DCH 32,@>8352
+       BR LOADSZ
+       DST 32,@>8352
+LOADSZ MOVE 2,G@DPTR,@>8354
+       MOVE @>8352,G@>0000(@>50),V*>8354
+       CALL ADVANCE
+       B LOADLP
+
+* The selected directory owns the allocation marks.
+* SAVE/DELETE build a replacement directory; never overwrite active data
+* merely to make room. Allocation failure leaves the old file reachable.
+MUTATE MOVE 2,G@MATCH,@>8350
+       DCZ @>8350
+       BS NEWNAME
+       CALL SETHEAD
+       CALL GETMETA
+       CZ @>835F
+       BR BADIO
+       MOVE 1,G@META+10,@>835F
+       AND 8,@>835F
+       CZ @>835F
+       BR PROTECT
+       B GETSLOT
+NEWNAME CEQ 7,V@>FFF6(@>4C)
+       BS NOFILE
+GETSLOT MOVE 2,G@BEST,@>8350
+       MOVE 31,G@>0000(@>50),G@NEWROOT
+       DCEQ >A102,@>8350
+       BR TARGETA
+       DST >A121,@>8350
+       BR TARGETD
+TARGETA DST >A102,@>8350
+TARGETD MOVE 2,@>8350,G@WROOT
+       MOVE 2,G@MATCH,@>8352
+       DCZ @>8352
+       BS EMPTYID
+       DSUB >A100,@>8352
+       DSRL 5,@>8352
+       BR SLOTGO
+EMPTYID DST 255,@>8352
+SLOTGO DST NEWROOT+9,@>8350
+       ST 16,@>835E
+SLOTLP CALL READGBYTE
+       CEQ @>8353,@>835F
+       BS SLOTOK
+       DINC @>8350
+       DEC @>835E
+       CZ @>835E
+       BR SLOTLP
+       B FULL
+SLOTOK MOVE 2,@>8350,G@WSLOT
+* Advance the 32-bit serial number, including carry and wrap to zero.
+       MOVE 4,G@NEWROOT+4,@>8350
+       DINC @>8352
+       DCZ @>8352
+       BR GENDONE
+       DINC @>8350
+GENDONE MOVE 4,@>8350,G@NEWROOT+4
+       CEQ 7,V@>FFF6(@>4C)
+       BR SAVE
+       MOVE 2,G@WSLOT,@>8350
+       ST 255,@>835F
+       MOVE 1,@>835F,G@>0000(@>50)
+       B COMMIT
+
+* Bound the source buffer before allocating or writing EEPROM.
+* PROGRAM SAVE reads the caller buffer; record CLOSE uses our staged buffer.
+* Both paths feed the same allocation and commit code below.
+SAVE   MOVE 1,G@SOURCE,@>835F
+       CZ @>835F
+       BR SAVERAM
+       MOVE 2,G@PAB+6,@>8350
+       DCH 3616,@>8350
+       BS NOSPACE
+       MOVE 2,@>8350,G@WLEN
+       MOVE 2,@>8350,G@WLEFT
+       MOVE 2,G@PAB+2,@>8352
+       DCH >3FFF,@>8352
+       BS NOSPACE
+       MOVE 2,@>8352,G@WVDP
+       DADD @>8350,@>8352
+       DCH >4000,@>8352
+       BS NOSPACE
+       B SAVEINIT
+SAVERAM MOVE 2,G@CTX+4,@>8350
+       MOVE 2,@>8350,G@WLEN
+       MOVE 2,@>8350,G@WLEFT
+       MOVE 2,G@CTX+2,G@WVDP
+SAVEINIT MOVE 120,G@ZEROS,G@NEWMETA
+       MOVE 35,G@ZEROS,G@NEWMETA+120
+       MOVE 10,G@SPACES,G@NEWMETA
+       DCLR @>8352
+       MOVE 1,G@NLEN,@>8353
+       DST @>834C,@>8354
+       DADD 5,@>8354
+       MOVE @>8352,V*>8354,G@NEWMETA
+PLANNEW
+       ST 1,@>835F
+       MOVE 1,@>835F,G@NEWMETA+10
+       MOVE 2,G@WLEN,G@NEWMETA+12
+       MOVE 2,G@WLEN,G@NEWMETA+14
+       MOVE 1,G@SOURCE,@>835F
+       CZ @>835F
+       BS PLANATTR
+       MOVE 1,G@CTX+11,G@NEWMETA+10
+       MOVE 1,G@CTX+17,G@NEWMETA+11
+       MOVE 1,G@CTX+10,G@NEWMETA+21
+       MOVE 2,G@CTX+6,G@NEWMETA+12
+       MOVE 2,G@CTX+8,G@NEWMETA+22
+PLANATTR
+       CALL SPACEINFO
+       MOVE 2,G@WLEN,@>8350
+       DADD 31,@>8350
+       DSRL 5,@>8350
+       DST @>8350,@>8352
+       DADD 28,@>8352
+* Count the blocks needed before any EEPROM writes, including metadata.
+PREFLIGHT DINC @>8350
+       DCH 31,@>8352
+       BR PREFLIGHTDONE
+       DSUB 31,@>8352
+       B PREFLIGHT
+PREFLIGHTDONE MOVE 2,G@CATFREE,@>8352
+       DCH @>8352,@>8350
+       BS FULL
+       CALL BEGINWRITE
+       CZ @>835E
+       BR BADIO
+       DST 2,@>8350
+       MOVE 2,@>8350,G@ALNEXT
+       MOVE 1,G@ZEROS,G@WCOUNT
+       DST NEWMETA+24,@>8350
+       MOVE 2,@>8350,G@WREF
+       DST >FFFF,@>8350
+       MOVE 2,@>8350,G@WCRC
+       MOVE 2,@>8350,G@WCRC+2
+WRCHUNK MOVE 2,G@WLEFT,@>8352
+       DCZ @>8352
+       BS WRMETA
+       DCH 32,@>8352
+       BR CHUNKSZ
+       DST 32,@>8352
+CHUNKSZ MOVE 2,@>8352,G@WRLEFT
+       MOVE 32,G@FFBYTES,G@NEWBLOCK
+       MOVE 2,G@WVDP,@>8350
+       MOVE 1,G@SOURCE,@>835F
+       CZ @>835F
+       BR CHUNKRAM
+       MOVE @>8352,V*>8350,G@NEWBLOCK
+       BR CHUNKNEXT
+CHUNKRAM MOVE @>8352,G@>0000(@>50),G@NEWBLOCK
+CHUNKNEXT
+       DADD @>8352,@>8350
+       MOVE 2,@>8350,G@WVDP
+       MOVE 2,G@WLEFT,@>8350
+       DSUB @>8352,@>8350
+       MOVE 2,@>8350,G@WLEFT
+       MOVE 4,G@WCRC,@>8354
+       DST NEWBLOCK,@>8350
+       CALL CRCPART
+       MOVE 4,@>8354,G@WCRC
+* Allocate new data without scanning/comparing every old data block.
+       CALL ALLOC
+       CZ @>835F
+       BR FULL
+       ST 4,@>835F
+       MOVE 1,@>835F,G@MARKS(@>52)
+       MOVE 2,@>8352,G@SCANID
+       CALL WRITEBLOCK
+       CZ @>835E
+       BR BADIO
+       MOVE 2,G@SCANID,@>8352
+GOTDATA MOVE 2,G@WREF,@>8350
+       MOVE 1,@>8353,G@>0000(@>50)
+       DINC @>8350
+       MOVE 2,@>8350,G@WREF
+       MOVE 1,G@WCOUNT,@>835F
+       INC @>835F
+       MOVE 1,@>835F,G@WCOUNT
+       B WRCHUNK
+WRMETA MOVE 1,G@WCOUNT,G@NEWMETA+20
+       MOVE 4,G@WCRC,@>8354
+       DINV @>8354
+       DINV @>8356
+       MOVE 4,@>8354,G@NEWMETA+16
+       DCLR @>8352
+       MOVE 1,G@WCOUNT,@>8353
+       DADD 24,@>8352
+       DST NEWMETA,@>8350
+       CALL CRC
+       MOVE 4,@>8354,G@>0000(@>50)
+       DCLR @>8350
+       MOVE 1,G@WCOUNT,@>8351
+       DADD 28,@>8350
+       MOVE 2,@>8350,G@LLEFT
+       DST NEWMETA,@>8350
+       MOVE 2,@>8350,G@LPTR
+       MOVE 2,G@ZEROS,G@PREV
+WRMETALP CALL ALLOC
+       CZ @>835F
+       BR FULL
+       ST 8,@>835F
+       MOVE 1,@>835F,G@MARKS(@>52)
+       MOVE 2,@>8350,G@WRTO
+       MOVE 2,@>8352,G@SCANID
+       MOVE 32,G@FFBYTES,G@NEWBLOCK
+       MOVE 2,G@PREV,@>8350
+       DCZ @>8350
+       BS METAFIRST
+       ST @>8353,@>835F
+       CALL WRITE
+       CZ @>835E
+       BR BADIO
+       B METALINK
+METAFIRST MOVE 2,G@WSLOT,@>8354
+       MOVE 1,@>8353,G@>0000(@>54)
+METALINK MOVE 2,G@WRTO,G@PREV
+       MOVE 2,G@LLEFT,@>8352
+       DCH 31,@>8352
+       BR METASZ
+       DST 31,@>8352
+METASZ MOVE 2,G@LPTR,@>8354
+       MOVE @>8352,G@>0000(@>54),G@NEWBLOCK+1
+       DADD @>8352,@>8354
+       MOVE 2,@>8354,G@LPTR
+       MOVE 2,G@LLEFT,@>8354
+       DSUB @>8352,@>8354
+       MOVE 2,@>8354,G@LLEFT
+       MOVE 2,G@WRTO,@>8350
+       CALL WRITEBLOCK
+       CZ @>835E
+       BR BADIO
+       MOVE 2,G@LLEFT,@>8354
+       DCZ @>8354
+       BR WRMETALP
+       B COMMIT
+
+* Allocate one previously unreachable AU. Never reuse an active metadata/data AU.
+ALLOC  MOVE 2,G@ALNEXT,@>8352
+       DCH 119,@>8352
+       BS ALFAIL
+ALLOCLP MOVE 1,G@MARKS(@>52),@>835F
+       CZ @>835F
+       BS ALLOCD
+       DINC @>8352
+       DCH 119,@>8352
+       BR ALLOCLP
+ALFAIL ST 1,@>835F
+       RTN
+ALLOCD DST @>8352,@>8358
+       DINC @>8358
+       MOVE 2,@>8358,G@ALNEXT
+       CALL AUADDR
+       RTN
+
+* Write only newly allocated blocks; publish the new root last.
+WRITEBLOCK MOVE 2,@>8350,G@WRTO
+       DST NEWBLOCK,@>8350
+       MOVE 2,@>8350,G@WRITEPTR
+       DST 32,@>8350
+       MOVE 2,@>8350,G@WRLEFT
+       CALL WRSPAN
+       RTN
+* Invalidate the inactive root before reclaiming its unreferenced blocks.
+BEGINWRITE CALL LOCK
+       CALL UNLOCK
+       MOVE 2,G@WROOT,@>8350
+       DADD 30,@>8350
+       CLR @>835F
+       CALL WRITE
+       RTN
+* Publish the new directory last: write its body, then its >A5 commit byte.
+* This is bounded replacement, not a promise about arbitrary power failures.
+COMMIT DST NEWROOT,@>8350
+       DST 26,@>8352
+       CALL CRC
+       MOVE 4,@>8354,G@NEWROOT+26
+       CALL BEGINWRITE
+       CZ @>835E
+       BR BADIO
+       DST NEWROOT,@>8350
+       MOVE 2,@>8350,G@WRITEPTR
+       MOVE 2,G@WROOT,G@WRTO
+       DST 30,@>8350
+       MOVE 2,@>8350,G@WRLEFT
+       CALL WRSPAN
+       CZ @>835E
+       BR BADIO
+       MOVE 2,G@WROOT,@>8350
+       DADD 30,@>8350
+       ST >A5,@>835F
+       CALL WRITE
+       CZ @>835E
+       BR BADIO
+       B DONE
+
+WRSPAN MOVE 2,G@WRITEPTR,@>8350
+       CALL READGBYTE
+       DINC @>8350
+       MOVE 2,@>8350,G@WRITEPTR
+       MOVE 2,G@WRTO,@>8350
+       CALL WRITE
+       CZ @>835E
+       BR WRRET
+       DINC @>8350
+       MOVE 2,@>8350,G@WRTO
+       MOVE 2,G@WRLEFT,@>8352
+       DDEC @>8352
+       MOVE 2,@>8352,G@WRLEFT
+       DCZ @>8352
+       BR WRSPAN
+WRRET  RTN
+
+* Only >0102->0FFF can be programmed. Return zero at >835E on readback match.
+WRITE  DCH >A101,@>8350
+       BR WRBAD
+       DCH >AFFF,@>8350
+       BS WRBAD
+       MOVE 1,G@>0000(@>50),@>835E
+       CEQ @>835F,@>835E
+       BS WRSAME
+       MOVE 1,@>835F,G@>0000(@>50)
+       MOVE 1,G@>0000(@>50),@>835E
+       XOR @>835F,@>835E
+       RTN
+WRSAME CLR @>835E
+       RTN
+WRBAD  ST 1,@>835E
+       RTN
+* Firmware unlock uses base 15. Return to base 14 for filesystem accesses.
+* The hardware jumper still protects configuration bytes >0000->0101.
+UNLOCK DST >983C,@>83FA
+       MOVE 1,G@KEYS,G@>FFFF
+       MOVE 1,G@KEYS+1,G@>FFFF
+       MOVE 1,G@KEYS+2,G@>FFFF
+       DST >9838,@>83FA
+       RTN
+LOCK   DST >983C,@>83FA
+       MOVE 1,G@KEYS+3,G@>FFFF
+       DST >9838,@>83FA
+       RTN
+KEYS   BYTE >55,>AA,>5A,0
+SPACES TEXT '          '
+FFBYTES BYTE >FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF
+       BYTE >FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF,>FF
+
+SELECT MOVE 2,G@ROOT,G@BEST
+       MOVE 4,G@CGEN,G@BGEN
+       MOVE 2,G@RMATCH,G@MATCH
+       RTN
+* Ambiguous serial numbers fail explicitly; no whole-volume recovery scans.
+AMBIGUOUS B BADIO
+
+* Root headers are checked once; only the selected directory is traversed.
+ROOTCK MOVE 2,G@ROOT,@>8350
+       MOVE 4,G@>0000(@>50),@>8354
+       DCEQ >5542,@>8354
+       BR ROOTBAD
+       DCEQ >4631,@>8356
+       BR ROOTBAD
+       DST 26,@>8352
+       CALL CRC
+       MOVE 4,G@>0000(@>50),@>8358
+       DCEQ @>8354,@>8358
+       BR ROOTBAD
+       DCEQ @>8356,@>835A
+       BR ROOTBAD
+       DADD 4,@>8350
+       CALL READGBYTE
+       CEQ >A5,@>835F
+       BR ROOTBAD
+       MOVE 2,G@ROOT,@>8350
+       DADD 4,@>8350
+       MOVE 4,G@>0000(@>50),G@CGEN
+       DADD 4,@>8350
+       CALL READGBYTE
+       AND >FC,@>835F
+       CZ @>835F
+       BR ROOTBAD
+       DADD 17,@>8350
+       CALL READGBYTE
+       CZ @>835F
+       BR ROOTBAD
+       B ROOTGOOD
+* Build the allocation marks and find the requested name during one scan.
+SCANROOT MOVE 120,G@ZEROS,G@MARKS
+       MOVE 3,G@ZEROS,G@NLEN+1
+       MOVE 2,G@ZEROS,G@RMATCH
+       MOVE 2,G@ROOT,@>8350
+       DADD 9,@>8350
+       MOVE 2,@>8350,G@DIRPTR
+DIRLOOP MOVE 2,G@DIRPTR,@>8350
+       CALL READAUID
+       CEQ >FF,@>8353
+       BS DIRNEXT
+       CALL AUADDR
+       CZ @>835F
+       BR ROOTBAD
+       CALL SETHEAD
+       CALL GETMETA
+       CZ @>835F
+       BR ROOTBAD
+       CALL METACRC
+       CZ @>835F
+       BR ROOTBAD
+       CALL FILECK
+       CZ @>835F
+       BR ROOTBAD
+       CALL NAMECK
+       CZ @>835F
+       BR ROOTBAD
+DIRNEXT MOVE 2,G@DIRPTR,@>8350
+       DINC @>8350
+       MOVE 2,@>8350,G@DIRPTR
+       MOVE 2,G@ROOT,@>8352
+       DADD 25,@>8352
+       DCEQ @>8352,@>8350
+       BR DIRLOOP
+ROOTGOOD CLR @>835F
+       RTN
+ROOTBAD ST 1,@>835F
+       RTN
+
+* AUADDR: ID in >8352 -> EEPROM address >8350, status >835F.
+AUADDR DCH 1,@>8352
+       BR ROOTBAD
+       DCH 119,@>8352
+       BS ROOTBAD
+       DST @>8352,@>8350
+       DSLL 5,@>8350
+       DADD >A100,@>8350
+       CLR @>835F
+       RTN
+
+* Gather a bounded metadata chain. Count fixes its exact length (28+n).
+* Caller may use this without allocation marks after root validation.
+* Read a linked file descriptor, including type, length and data-block IDs.
+GETMETA MOVE 2,G@HEAD,@>8350
+       DST @>8350,@>8352
+       DADD 21,@>8352
+       DCLR @>8354
+       MOVE 1,G@>0000(@>52),@>8355
+       DCH 113,@>8354
+       BS ROOTBAD
+       DADD 28,@>8354
+       MOVE 2,@>8354,G@MLEN
+       MOVE 2,@>8354,G@MLEFT
+       DST META,@>8352
+       MOVE 2,@>8352,G@MPTR
+METALP MOVE 2,@>8350,G@CHAIN
+       CALL READAUID
+       MOVE 2,@>8352,G@NEXTP
+       DINC @>8350
+       MOVE 2,G@MPTR,@>8352
+       MOVE 31,G@>0000(@>50),G@>0000(@>52)
+       DADD 31,@>8352
+       MOVE 2,@>8352,G@MPTR
+       MOVE 2,G@MLEFT,@>8354
+       DCH 31,@>8354
+       BR METAEND
+       DSUB 31,@>8354
+       MOVE 2,@>8354,G@MLEFT
+       MOVE 2,G@NEXTP,@>8352
+       CALL AUADDR
+       CZ @>835F
+       BR ROOTBAD
+       B METALP
+METAEND MOVE 2,G@NEXTP,@>8350
+       DCEQ 255,@>8350
+       BR ROOTBAD
+       CLR @>835F
+       RTN
+* Check descriptor CRC once during directory traversal, not on every reread.
+METACRC DST META,@>8350
+       MOVE 2,G@MLEN,@>8352
+       DSUB 4,@>8352
+       CALL CRC
+       MOVE 4,G@>0000(@>50),@>8358
+       DCEQ @>8354,@>8358
+       BR ROOTBAD
+       DCEQ @>8356,@>835A
+       BR ROOTBAD
+       CLR @>835F
+       RTN
+
+* FILECK: reject metadata reuse/cycles and metadata/data intersections.
+* Data references may share AUs with other data references.
+FILECK MOVE 2,G@HEAD,@>8350
+MARKLP DST @>8350,@>8352
+       DSUB >A100,@>8352
+       DSRL 5,@>8352
+       MOVE 1,G@MARKS(@>52),@>835F
+       CZ @>835F
+       BR ROOTBAD
+       ST 1,@>835F
+       MOVE 1,@>835F,G@MARKS(@>52)
+       CALL READAUID
+       CEQ 255,@>8353
+       BS ATTRS
+       CALL AUADDR
+       CZ @>835F
+       BR ROOTBAD
+       BR MARKLP
+ATTRS  MOVE 2,G@META+10,@>8350
+       ST @>8350,@>8352
+       AND >74,@>8352
+       CZ @>8352
+       BR ROOTBAD
+       CH 2,@>8351
+       BS ROOTBAD
+       MOVE 2,G@META+14,@>8352
+       DCH 3616,@>8352
+       BS ROOTBAD
+       MOVE 2,@>8352,G@DLEFT
+       DADD 31,@>8352
+       DSRL 5,@>8352
+       DCLR @>8350
+       MOVE 1,G@META+20,@>8351
+       DCEQ @>8350,@>8352
+       BR ROOTBAD
+       CALL SETREFS
+DATALP CALL GETLEFT
+       DCZ @>8352
+       BS DATAEND
+* Walk data references without reading or checksumming their payloads.
+       CALL NEXTAU
+       CZ @>835F
+       BR ROOTBAD
+       DST @>8350,@>8352
+       DSUB >A100,@>8352
+       DSRL 5,@>8352
+       MOVE 1,G@MARKS(@>52),@>835E
+       ST @>835E,@>835F
+       AND 1,@>835F
+       CZ @>835F
+       BR ROOTBAD
+       OR 2,@>835E
+       MOVE 1,@>835E,G@MARKS(@>52)
+       CALL GETLEFT
+       DCH 32,@>8352
+       BR DATASZ
+       DST 32,@>8352
+DATASZ MOVE 2,G@DLEFT,@>8358
+       DSUB @>8352,@>8358
+       MOVE 2,@>8358,G@DLEFT
+       B DATALP
+DATAEND B ATTRCK
+
+* Validate supported metadata fields. Selected record spans are bounded when
+* accessed; unrelated record payloads are not parsed during a directory scan.
+ATTRCK MOVE 2,G@META+10,@>8350
+       ST @>8350,@>8352
+       AND 1,@>8352
+       CZ @>8352
+       BS RECORDS
+       AND >82,@>8350
+       CZ @>8350
+       BR ROOTBAD
+       MOVE 3,G@META+21,@>8352
+       DCZ @>8352
+       BR ROOTBAD
+       CZ @>8354
+       BR ROOTBAD
+       CZ @>8351
+       BR ATTROK
+       MOVE 4,G@META+12,@>8352
+       DCEQ @>8352,@>8354
+       BR ROOTBAD
+ATTROK CLR @>835F
+       RTN
+RECORDS CZ @>8351
+       BR ROOTBAD
+       AND >80,@>8350
+       MOVE 1,@>8350,G@ISVAR
+       MOVE 1,G@META+21,@>835F
+       CZ @>835F
+       BS ROOTBAD
+       MOVE 1,@>835F,G@MAXREC
+       CZ @>8350
+       BS RECSIZE
+       CEQ 255,@>835F
+       BS ROOTBAD
+RECSIZE CLR @>835F
+       RTN
+
+NEXTAU MOVE 2,G@REFPTR,@>8350
+       CALL READAUID
+       DINC @>8350
+       MOVE 2,@>8350,G@REFPTR
+       CALL AUADDR
+       RTN
+
+* Count entries and compare the canonical requested name directly.
+NAMECK MOVE 1,G@NCOUNT,@>835F
+       INC @>835F
+       MOVE 1,@>835F,G@NCOUNT
+       DST META,@>8350
+       DST REQNAME,@>8352
+       ST 10,@>8358
+REQLOOP MOVE 1,G@>0000(@>50),@>835E
+       MOVE 1,G@>0000(@>52),@>835F
+       CEQ @>835E,@>835F
+       BR NAMEEND
+       DINC @>8350
+       DINC @>8352
+       DEC @>8358
+       CZ @>8358
+       BR REQLOOP
+       MOVE 2,G@HEAD,G@RMATCH
+NAMEEND CLR @>835F
+       RTN
+
+* IEEE CRC32 is retained for UBF1 compatibility. A 64-byte nibble table
+* replaces the previous 1,024-byte table; payload CRC is calculated on write.
+CRC    DST >FFFF,@>8354
+       DST >FFFF,@>8356
+       CALL CRCPART
+       DINV @>8354
+       DINV @>8356
+       RTN
+CRCPART DCZ @>8352
+       BS CRCEND
+CRCLOOP CALL READGBYTE
+       XOR @>835F,@>8357
+       CALL CRC4
+       CALL CRC4
+       DINC @>8350
+       DDEC @>8352
+       DCZ @>8352
+       BR CRCLOOP
+CRCEND RTN
+CRC4   DCLR @>835A
+       ST @>8357,@>835B
+       AND 15,@>835B
+       DSLL 2,@>835A
+       DST @>8354,@>8358
+       DSLL 12,@>8358
+       DSRL 4,@>8356
+       DOR @>8358,@>8356
+       DSRL 4,@>8354
+       MOVE 4,G@CRCTAB(@>5A),@>8358
+       DXOR @>8358,@>8354
+       DXOR @>835A,@>8356
+       RTN
+       COPY "records.gpl"
+CRCTAB DATA >0000,>0000,>1DB7,>1064,>3B6E,>20C8,>26D9,>30AC
+       DATA >76DC,>4190,>6B6B,>51F4,>4DB2,>6158,>5005,>713C
+       DATA >EDB8,>8320,>F00F,>9344,>D6D6,>A3E8,>CB61,>B38C
+       DATA >9B64,>C2B0,>86D3,>D2D4,>A00A,>E278,>BDBD,>F21C
+       COPY "scratch.gpl"
+ZEROS  BSS 120
+PROTECT OR >20,V@>FFF7(@>4C)
+       B DONE
+FULL   OR >80,V@>FFF7(@>4C)
+       B DONE
+BADOP  OR >60,V@>FFF7(@>4C)
+       B DONE
+NOFILE OR >E0,V@>FFF7(@>4C)
+       B DONE
+NOSPACE OR >80,V@>FFF7(@>4C)
+       B DONE
+BADIO  OR >C0,V@>FFF7(@>4C)
+DONE   MOVE 1,G@SOURCE,@>835F
+       CZ @>835F
+       BS RETURN
+       ST V@>FFF7(@>4C),@>835F
+       AND >E0,@>835F
+       CZ @>835F
+       BR RETURN
+       CALL GETHANDLE
+       DCZ @>8350
+       BS RETURN
+       MOVE 1,G@ZEROS,G@>0000(@>50)
+* Every exit relocks EEPROM, restores the caller base, selects ROM bank 0,
+* and returns through the console DSR convention rather than a plain RTN.
+RETURN CALL LOCK
+       DST @>834A,@>83FA
+       DCLR @>6000
+       CALL >0012
+       COPY "manager.gpl"
+* Unreferenced attribution for our DSR/file-manager additions only.
+* Stored after all code/data; original Adventure and Tursi firmware unchanged.
+HEXBUS TEXT '2026 Hexbus'
+       END

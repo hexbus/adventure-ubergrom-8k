@@ -1,0 +1,326 @@
+* Copyright (c) 2026 hexbus.
+* SPDX-License-Identifier: Apache-2.0
+* BASIC and the menu share CATREADDIR and display routines. BASIC saves
+* its screen/scratch before drawing and restores them before returning.
+* TI BASIC read-only CALL CAT("UBE1") / CALL CAT("ROM1").
+* Follows the manager in the same GROM. Device is a quoted four-character literal.
+* XML >1B reads tokens; CALL return uses >0012, never the menu's EXIT.
+* PARSE cannot return directly to this high GROM address: its BASIC stack
+* encodes a GPL return using the address high bit. Do not use it here.
+* Catalog backup reuses space not touched by the read-only directory call:
+* screen 0..479 in the unused tail of the 3616-byte record buffer (>6E20),
+* screen 480..767 at >7300, BASIC scratch >7420, keyboard/base >7490/>7498.
+* Directory inspection does not allocate blocks or change the pending-write area.
+BCLIST DATA 0,BCENTRY
+       STRI 'CAT'
+BCENTRY DADD 4,@>832C
+       XML >1B
+       CEQ >B7,@>8342
+       BR BCSYNTAX
+       XML >1B
+       CEQ >C7,@>8342
+       BR BCSYNTAX
+       XML >1B
+       CEQ 4,@>8342
+       BR BCVALUE
+       XML >1B
+       ST @>8342,@>8358
+       XML >1B
+       ST @>8342,@>8359
+       XML >1B
+       ST @>8342,@>835A
+       XML >1B
+       ST @>8342,@>835B
+       XML >1B
+       CEQ >B6,@>8342
+       BR BCSYNTAX
+       XML >1B
+       CZ @>8342
+       BR BCSYNTAX
+       CLR @>835D
+       DCEQ >5542,@>8358
+       BR BCROMNAME
+       DCEQ >4531,@>835A
+       BR BCVALUE
+       B BCPROFILE
+BCROMNAME DCEQ >524F,@>8358
+       BR BCVALUE
+       DCEQ >4D31,@>835A
+       BR BCVALUE
+       ST 1,@>835D
+BCPROFILE MOVE 2,G@>A000,@>8350
+       DCEQ >05FA,@>8350
+       BR BCVALUE
+       MOVE 1,G@>A0E5,@>835F
+       CZ @>835F
+       BR BCVALUE
+       MOVE 1,G@>A0ED,@>835F
+       CEQ >FF,@>835F
+       BR BCVALUE
+       DST @>83FA,@>835E
+       DST >9838,@>83FA
+       MOVE 2,@>835E,G@>7498
+       MOVE 112,@>8300,G@>7420
+       MOVE 8,@>8374,G@>7490
+       MOVE 480,V@0,G@>6E20
+       MOVE 288,V@480,G@>7300
+       ST @>835D,@>8323
+       ST 3,@>8374
+       ST 96,@>833D
+       DCLR @>832E
+BCDRAW CLR @>8338
+       ALL 128
+       CZ @>8323
+       BR BCROM
+       DST >80,@>8332
+       CALL CATREADDIR
+       CZ @>835F
+       BR BCNOTREADY
+       DST >A0,@>8332
+       DST 129,@>8320
+       CALL CATTABLE
+* Clear the PAB/summary and final metadata row from the saved screen only.
+* Row 21 is still blank and lies beyond the 544-byte directory at >0080.
+       MOVE 96,V@672,V@0
+       MOVE 32,V@672,V@96
+       MOVE 128,V@0,V@640
+       B BCLABELS
+* Shared metadata request: summary destination >8332, status >835F.
+CATREADDIR MOVE 16,G@CATZERO,V@>40
+       ST 11,V@>40
+       DST @>8332,V@>42
+       ST 5,V@>49
+       MOVE 5,G@CATPREFIX,V@>4A
+       DST >49,@>8356
+       CALL >0010
+       BYTE >08
+       BS CATIOFAIL
+       ST V@>41,@>835F
+       AND >E0,@>835F
+       RTN
+* Shared renderer: entry >8332, first screen row >8320, font bias >833D.
+CATTABLE CLR @>8322
+BCUBELOOP DST @>8332,@>8350
+       DST V@12(@>50),@>8324
+       ST V@10(@>50),@>8337
+       ST V@21(@>50),@>8339
+       MOVE 10,V*>8350,@>834A
+       MOVE 32,V@672,V@>FFFF(@>20)
+       CZ @>834A
+       BS BCEMPTY
+       DST @>8320,@>8354
+       ST 10,@>835E
+       CALL BCNAME
+       CALL BCSIZE
+       CALL BCATTR
+       CZ @>833D
+       BR BCUBENEXT
+       ST @>8337,@>835F
+       AND 8,@>835F
+       CZ @>835F
+       BS CATROWMARK
+       ST >21,V@30(@>20)
+CATROWMARK DCLR @>8354
+       ST @>8322,@>8355
+       ST V@>1300(@>54),@>835F
+       CZ @>835F
+       BS BCUBENEXT
+       ST @>835F,V@29(@>20)
+       B BCUBENEXT
+BCEMPTY DST BCEMPTYSTR,@>8350
+       DST @>8320,@>8354
+       ST 7,@>835E
+       CALL BCSTRING
+BCUBENEXT DADD 32,@>8332
+       DADD 32,@>8320
+       INC @>8322
+       CEQ 16,@>8322
+       BR BCUBELOOP
+       RTN
+BCROM DCLR @>6000
+       DCEQ >4346,@>6010
+       BR BCNOTREADY
+       DCEQ >3031,@>6012
+       BR BCNOTREADY
+       DST @>6014,@>8330
+       DCZ @>8330
+       BS BCLABELS
+       DCH 510,@>8330
+       BS BCNOTREADY
+       DST @>832E,@>8332
+       DST 129,@>8320
+       CLR @>8322
+BCROMLOOP DCEQ @>8330,@>8332
+       BS BCLABELS
+       DST @>8332,@>8350
+       DSLL 4,@>8350
+       DADD >6020,@>8350
+       DST @>000A(@>50),@>8324
+       MOVE 10,@>0000(@>50),@>834A
+       DST @>8320,@>8354
+       ST 10,@>835E
+       CALL BCNAME
+       CALL BCSIZE
+       ST 1,@>8337
+       CALL BCATTR
+       DINC @>8332
+       DADD 32,@>8320
+       INC @>8322
+       CEQ 16,@>8322
+       BR BCROMLOOP
+BCLABELS DST BCTITLE,@>8350
+       DST 33,@>8354
+       ST 9,@>835E
+       CALL BCSTRING
+       DST BCUBE,@>8350
+       CZ @>8323
+       BS BCDEV
+       DST BCROMSTR,@>8350
+BCDEV  DST 42,@>8354
+       ST 4,@>835E
+       CALL BCSTRING
+       DST BCHEAD,@>8350
+       DST 97,@>8354
+       ST 29,@>835E
+       CALL BCSTRING
+       DST BCEXIT,@>8350
+       DST 744,@>8354
+       ST 12,@>835E
+       CZ @>8338
+       BR BCPROMPT
+       CZ @>8323
+       BS BCPROMPT
+       DST BCPAGES,@>8350
+       DST 737,@>8354
+       ST 28,@>835E
+BCPROMPT CALL BCSTRING
+       B BCRELEASE
+BCNOTREADY ALL 128
+       DST BCERROR,@>8350
+       DST 129,@>8354
+       ST BCEND-BCERROR,@>835E
+       CALL BCSTRING
+       ST 1,@>8338
+       B BCLABELS
+BCRELEASE SCAN
+       CEQ >FF,@>8375
+       BR BCRELEASE
+BCWAIT SCAN
+       BR BCWAIT
+       CEQ 13,@>8375
+       BS BCRETURN
+       CZ @>8338
+       BR BCWAIT
+       CZ @>8323
+       BS BCWAIT
+       CEQ >4E,@>8375
+       BS BCNEXTPAGE
+       CEQ >50,@>8375
+       BR BCWAIT
+       DCZ @>832E
+       BS BCWAIT
+       DSUB 16,@>832E
+       B BCDRAW
+BCNEXTPAGE DST @>832E,@>8350
+       DADD 16,@>8350
+       DCH @>8350,@>8330
+       BR BCWAIT
+       DST @>8350,@>832E
+       B BCDRAW
+BCRETURN MOVE 480,G@>6E20,V@0
+       MOVE 288,G@>7300,V@480
+       MOVE 112,G@>7420,@>8300
+       MOVE 8,G@>7490,@>8374
+       MOVE 2,G@>7498,@>83FA
+       CALL >0012
+* Names/numbers supplied as ASCII in >834A, length >835E, screen >8354.
+BCNAME DCLR @>8356
+BCNAMELP ST @>834A(@>56),@>835F
+       CH 31,@>835F
+       BR BCQUESTION
+       CH 95,@>835F
+       BR BCCHAR
+BCQUESTION ST >3F,@>835F
+BCCHAR ADD @>833D,@>835F
+       ST @>835F,V*>8354
+       DINC @>8354
+       DINC @>8356
+       DEC @>835E
+       CZ @>835E
+       BR BCNAMELP
+       RTN
+BCSIZE ST >30,@>8336
+BCTENK DCH 9999,@>8324
+       BR BCSMALL
+       DSUB 10000,@>8324
+       INC @>8336
+       B BCTENK
+BCSMALL CALL CATWORD
+       ST @>8336,@>834A
+       MOVE 4,@>8325,@>834B
+       DST @>8320,@>8354
+       DADD 24,@>8354
+       ST 5,@>835E
+       CALL BCNAME
+       RTN
+* TI attributes come from UBF1 metadata. CF01 ROM1 entries are PROGRAM.
+BCATTR DST @>8320,@>8354
+       DADD 11,@>8354
+       DST BCPROG,@>8350
+       ST 7,@>835E
+       ST @>8337,@>835F
+       AND 1,@>835F
+       CZ @>835F
+       BR BCSTRING
+       DST BCDF,@>8350
+       ST @>8337,@>835F
+       AND 2,@>835F
+       CZ @>835F
+       BS BCATVAR
+       DST BCIF,@>8350
+BCATVAR ST @>8337,@>835F
+       AND >80,@>835F
+       CZ @>835F
+       BS BCATPRINT
+       DADD BCDV-BCDF,@>8350
+BCATPRINT CALL BCSTRING
+       DINC @>8354
+       ST @>8339,@>8324
+       CALL CATDEC
+       MOVE 3,@>8325,@>834A
+       ST 3,@>835E
+* Suppress leading zeroes in record lengths, keeping the last digit.
+       CEQ >30,@>834A
+       BR BCATDIGITS
+       ST 32,@>834A
+       CEQ >30,@>834B
+       BR BCATDIGITS
+       ST 32,@>834B
+BCATDIGITS B BCNAME
+BCSTRING MOVE 1,G@>0000(@>50),@>835F
+       ADD @>833D,@>835F
+       ST @>835F,V*>8354
+       DINC @>8350
+       DINC @>8354
+       DEC @>835E
+       CZ @>835E
+       BR BCSTRING
+       RTN
+BCSYNTAX CALL >001C
+       BYTE >20,>2C
+BCVALUE CALL >001C
+       BYTE >20,>64
+BCTITLE TEXT 'DEVICE:  '
+BCUBE TEXT 'UBE1'
+BCROMSTR TEXT 'ROM1'
+BCHEAD TEXT 'FILE       TYPE         BYTES'
+BCPROG TEXT 'PROGRAM'
+BCDF TEXT 'DIS/FIX'
+BCDV TEXT 'DIS/VAR'
+BCIF TEXT 'INT/FIX'
+       TEXT 'INT/VAR'
+BCEMPTYSTR TEXT '(EMPTY)'
+BCEXIT TEXT 'ENTER:RETURN'
+BCPAGES TEXT 'P:PREV  N:NEXT  ENTER:RETURN '
+BCERROR TEXT 'DEVICE CATALOG NOT READY'
+BCEND

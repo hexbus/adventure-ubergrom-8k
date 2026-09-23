@@ -1,0 +1,134 @@
+{
+  "release": "adventure-8k-frozen-2026-09-23",
+  "runtime_frozen": true,
+  "files": {
+    ".gitattributes": {
+      "bytes": 47,
+      "sha256": "3af3c86044083cb0433203346c213525ac13fa8db9f10679eafc6db6528ad0ba"
+    },
+    ".gitignore": {
+      "bytes": 88,
+      "sha256": "cdab5a86879e739bf8744a4992e69d9f2d74e24a9439ce740d89368959b7cfc0"
+    },
+    "AGENTS.md": {
+      "bytes": 1001,
+      "sha256": "4b9cc06a99ac9fa9b2634da4c176178794006ff74393bf745a8ae515fc5faf31"
+    },
+    "LICENSE-CODE.txt": {
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    "LICENSE-DOCUMENTATION.md": {
+      "bytes": 836,
+      "sha256": "b5998f8e28429aff54cafec32164a5e6b04149f46828709f191f35914885b49c"
+    },
+    "LICENSE.md": {
+      "bytes": 1183,
+      "sha256": "38ab3cdb84980310da822d914845ae418dccd173d1bf9d6967065babce6cf12e"
+    },
+    "NOTICE.txt": {
+      "bytes": 1423,
+      "sha256": "8c5d9a07133f5abd7d16d93c2f188f28ed11918004e22bbb604fbe44665ac166"
+    },
+    "README.md": {
+      "bytes": 2121,
+      "sha256": "8f8667c9c44bd35f5a5602c7aa535761c047fb0ae12826bfdf463b2c1fb41919"
+    },
+    "docs/building.md": {
+      "bytes": 3882,
+      "sha256": "abd2c5d1794634a4ac1f2767490aca5b86cdd6e914d74a3e478197fa4acacbc3"
+    },
+    "docs/code-guide.md": {
+      "bytes": 4216,
+      "sha256": "c74cbb4090c603b64fbd67073e07a17ea20c45f509b341783a4b769271c51a0b"
+    },
+    "docs/programming.md": {
+      "bytes": 2834,
+      "sha256": "368cb73ec61364aacb0397263ae251aa00653403b63370785aef52c457a8ffb1"
+    },
+    "docs/verification.md": {
+      "bytes": 2434,
+      "sha256": "977b7af22b20007870d4c3f182d33adaabf8e1e7b5683a9d6f5e903edc95ef82"
+    },
+    "examples/adventures.json": {
+      "bytes": 103,
+      "sha256": "b7ea4ba76bcb4a5fa00e8dfdf9223479eecd432700694fd09693cbc25538b7d4"
+    },
+    "public-files.json": {
+      "bytes": 1103,
+      "sha256": "491eafac2e839c32b9298305166a4479dcc56ad6c5f964b09cab1b9808f83455"
+    },
+    "release/blank-eeprom.bin": {
+      "bytes": 4096,
+      "sha256": "ea547d0102d91f1ad0092bae595d0123e481d087c78aa4b8ab247d070359867c"
+    },
+    "release/frozen.json": {
+      "bytes": 1033,
+      "sha256": "7e0fc854ce17b655b21c84bd8c5ac898cc9c39c4b212d844c557fc91b53ee9e2"
+    },
+    "release/rom1-loader.bin": {
+      "bytes": 318,
+      "sha256": "767e77dc5690d68a49ebe1f396db02befa522f5ca8ec888e00f02b768c70803b"
+    },
+    "release/ube1-grom8k.bin": {
+      "bytes": 8192,
+      "sha256": "925b895eaa0121d42d8dc118d0fbdbcde40037801ee592e485a1cfd37937597c"
+    },
+    "release/verification.json": {
+      "bytes": 871,
+      "sha256": "34141fa56713dfa4e6e4f9fd2d5510a471eb8ab0e50a55d91fafb7144a43e04e"
+    },
+    "sources/gpl/rom1/rom1.gpl": {
+      "bytes": 2913,
+      "sha256": "15c188591b85cdd6af14cc71ee8698bd12f3f4334e84ddc9646431bf1f68b69f"
+    },
+    "sources/gpl/ubf1-compact/basic-cat.gpl": {
+      "bytes": 8307,
+      "sha256": "a7364e0c7f47efefa35ed5289e5a421716ce31a669f63611b700d616e222db45"
+    },
+    "sources/gpl/ubf1-compact/directory.gpl": {
+      "bytes": 2172,
+      "sha256": "42d35cd524450fc7094f1d73b6302bdc1894b2bf4f50e4c6f39fb32dc712c089"
+    },
+    "sources/gpl/ubf1-compact/manager.gpl": {
+      "bytes": 10107,
+      "sha256": "38d538d05c6fa7e6b2ffd5b555a7dde17695f17c08216c82a6ca57b0670e4beb"
+    },
+    "sources/gpl/ubf1-compact/records.gpl": {
+      "bytes": 14985,
+      "sha256": "7da15880b19434130ecef6ebb2ebbe9c94bb5736aca8adc49e7b95ddaa14528e"
+    },
+    "sources/gpl/ubf1-compact/scratch.gpl": {
+      "bytes": 898,
+      "sha256": "28893ea01810146a8edd7f3d5a79e28c08d7d2f8df2aba9d979a83f59749db63"
+    },
+    "sources/gpl/ubf1-compact/ube1.gpl": {
+      "bytes": 23623,
+      "sha256": "dba51ca005e66acce2d0688594c47cfb4ec087530e0fe16a68c45b00961c15a3"
+    },
+    "tests/verify.py": {
+      "bytes": 4422,
+      "sha256": "0ae1110386c0b64af004e6da7de850ff6699263878f4a9bf5f50139d67b445cb"
+    },
+    "tools/build-docs.ps1": {
+      "bytes": 5211,
+      "sha256": "0bcb6261a1f9a0334eb2752d45c0d722189acb81080ba8a1872105c23acc59f4"
+    },
+    "tools/build.py": {
+      "bytes": 10524,
+      "sha256": "9a1e4e93058a388c41f06ba6ceda90f98a6268add12288b639f5b693dba05000"
+    },
+    "tools/docs/markdown-print.css": {
+      "bytes": 4191,
+      "sha256": "9296b9960c5774d08fc259f7b328a611b7874972705ea1b613b03cca01396c2e"
+    },
+    "tools/docs/render-markdown-pdf.mjs": {
+      "bytes": 7668,
+      "sha256": "c800b8c015e31c56a5d901bd902c4799586272fcf90433b23fb1b392d18a9ddc"
+    },
+    "tools/prepare_release.py": {
+      "bytes": 2603,
+      "sha256": "5cee0f5868e70eacf18c28e9678f2108833d8c5cca2f4a66621774b6211a080b"
+    }
+  }
+}

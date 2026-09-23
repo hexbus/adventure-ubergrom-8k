@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "source_rebuild": "Commented GPL sources reproduce both frozen components byte-for-byte with xdt99 3.6.5.",
+  "packing": [
+    {
+      "collection": "ai",
+      "files": 18,
+      "all_seven_images_identical": true
+    },
+    {
+      "collection": "third-party",
+      "files": 49,
+      "all_seven_images_identical": true
+    }
+  ],
+  "whtech_example": "advent.zip/phm3041g3.bin hash matches supported module; Pirates_Adventure_PHD5043.dsk/PIRATE packs successfully.",
+  "runtime": "Frozen bytes match development build ubf1-compact-v1-hexbus, whose Adventure and standalone emulator/host suites passed.",
+  "hardware": "User confirmed load/save, copy, BASIC DELETE and the GROM menu mapping fix; no exhaustive physical acceptance claim.",
+  "public_inputs": "No original module, adventure payloads or AVR firmware included."
+}

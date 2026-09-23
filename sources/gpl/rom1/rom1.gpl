@@ -1,0 +1,109 @@
+* Copyright (c) 2026 hexbus.
+* SPDX-License-Identifier: Apache-2.0
+* Cartridge file LOAD service. GROM >7800; CPU ROM files in 8K banks.
+* ROM bank 0: >6010='CF01', >6014=count, >6020=16-byte entries.
+* Entry: name[10] space-padded, byte length, bank number, bank offset.
+* Only PROGRAM LOAD (5); SAVE (6) is write-protected; other opcodes illegal.
+* Scratch usage: >834A->835F, within the console DSR argument/scratch area.
+* The caller's PAB stays in VDP. No persistent state or expansion RAM.
+* Bank 0 is selected on every return; cartridge CPU ROM is data-only.
+       GROM >6000
+       AORG >1800
+DSRLST DATA >0000,ENTRY
+       STRI 'ROM1'
+ENTRY  DST @>8356,@>8358
+       DSUB @>8354,@>8358
+       MOVE 10,V@>FFF6(@>58),@>834A
+       AND >1F,V@>FFF7(@>58)
+       CEQ 6,@>834A
+       BR ISLOAD
+       OR >20,V@>FFF7(@>58)
+       B DONE
+ISLOAD CEQ 5,@>834A
+       BR BADOP
+       CEQ >2E,V*>8356
+       BR NOFILE
+       ST @>8353,@>834A
+       SUB @>8355,@>834A
+       SUB 1,@>834A
+       CZ @>834A
+       BS NOFILE
+       CH 10,@>834A
+       BS NOFILE
+       DCLR @>6000
+       DCEQ >4346,@>6010
+       BR NOFILE
+       DCEQ >3031,@>6012
+       BR NOFILE
+       DST @>6014,@>835C
+       DCZ @>835C
+       BS NOFILE
+       DCH 510,@>835C
+       BS NOFILE
+       DST >6020,@>835A
+NEXT   DST @>8358,@>8356
+       DADD 5,@>8356
+       DCLR @>835E
+       ST @>834A,@>834B
+CMPNAM ST @>0000(@>5A),@>8352
+       CEQ @>8352,V*>8356
+       BR SKIP
+       DINC @>835A
+       DINC @>8356
+       DINC @>835E
+       DEC @>834B
+       CZ @>834B
+       BR CMPNAM
+       CEQ 10,@>834A
+       BR PADCHK
+       BR FOUND
+PADCHK CEQ >20,@>0000(@>5A)
+       BS FOUND
+SKIP   DSUB @>835E,@>835A
+       DADD 16,@>835A
+       DDEC @>835C
+       DCZ @>835C
+       BR NEXT
+       B NOFILE
+FOUND  DSUB @>835E,@>835A
+       DST @>000A(@>5A),@>834E
+       DCH @>8350,@>834E
+       BS NOSPACE
+       DCH >3FFF,@>834C
+       BS NOSPACE
+       DST @>834C,@>8352
+       DADD @>834E,@>8352
+       DCH >4000,@>8352
+       BS NOSPACE
+       DST @>000C(@>5A),@>8354
+       DSLL 1,@>8354
+       DADD >6000,@>8354
+       DST @>000E(@>5A),@>835A
+       DADD >6000,@>835A
+       DCZ @>834E
+       BS DONE
+* Copy to the caller VDP buffer one ROM-bank fragment at a time.
+* CPU writes to >6000+2*bank select the positive-switched 8K ROM bank.
+RDLOOP DCLR @>0000(@>54)
+       DST >8000,@>8350
+       DSUB @>835A,@>8350
+       DCH @>834E,@>8350
+       BS SHORT
+       BR COPY
+SHORT  DST @>834E,@>8350
+COPY   MOVE @>8350,@>0000(@>5A),V*>834C
+       DSUB @>8350,@>834E
+       DADD @>8350,@>834C
+       DST >6000,@>835A
+       DINCT @>8354
+       DCZ @>834E
+       BR RDLOOP
+       B DONE
+BADOP  OR >60,V@>FFF7(@>58)
+       B DONE
+NOFILE OR >E0,V@>FFF7(@>58)
+       B DONE
+NOSPACE OR >80,V@>FFF7(@>58)
+DONE   DCLR @>6000
+       CALL >0012
+       END

@@ -1,0 +1,32 @@
+{
+  "release": "adventure-8k-frozen-2026-09-23",
+  "device": "UBE1",
+  "filesystem": "UBF1",
+  "code_bytes": 8167,
+  "grom_bytes": 8192,
+  "free_bytes": 25,
+  "signature": "2026 Hexbus",
+  "signature_offset": 8156,
+  "original_adventure_sha256": "450ff872edb5450337085c9fbf6d38df7adbf3c1161e504f83d8fb4f6106baec",
+  "firmware_hex_sha256": "bfb0c6e734f722a4df76d29474b4931a92831011499c9409b1ff8593acb1fdfe",
+  "firmware_boot_sha256": "3c90c9ddb44eea6415e1e4362b99afe6c6fd601c427177acb2e3bfa325fbabc6",
+  "fuses": {
+    "low": "C2",
+    "high": "D8",
+    "extended": "FF"
+  },
+  "files": {
+    "blank-eeprom.bin": {
+      "bytes": 4096,
+      "sha256": "ea547d0102d91f1ad0092bae595d0123e481d087c78aa4b8ab247d070359867c"
+    },
+    "rom1-loader.bin": {
+      "bytes": 318,
+      "sha256": "767e77dc5690d68a49ebe1f396db02befa522f5ca8ec888e00f02b768c70803b"
+    },
+    "ube1-grom8k.bin": {
+      "bytes": 8192,
+      "sha256": "925b895eaa0121d42d8dc118d0fbdbcde40037801ee592e485a1cfd37937597c"
+    }
+  }
+}
