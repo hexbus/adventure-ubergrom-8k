@@ -14,12 +14,13 @@ and delete saved files too.  This idea originally came from the ROMDSK project I
 envisioned several years ago plus an idea from Tursi's [Super Space Acer](https://www.arcadeshopper.com/wp/store/#!/Super-Space-Acer-2024-limited-edition/p/755974759/category=0) game 
 because it was able to save high scores on an UberGROM.
 
-We kept the DSR, file manager and BASIC CALL CAT together in one 8K GROM.
+I kept the DSR, file manager and BASIC CALL CAT together in one 8K GROM.
 The DSR ROM uses 8,167 bytes, including the little `2026 Hexbus` signature. That leaves
 25 bytes. The original Adventure GROM and the ROM1 loader are in another slot.
 
-This is the version we're freezing. Tunnels of Doom and the printer/cassette
-ideas are still on the backlog, but they'll be worked on separately.
+This is the version I am releasing today. I have future enhancements coming, including
+Tunnels of Doom support and the printer/cassette redirection ideas, but those are still 
+on the backlog.  They will be worked on separately.
 
 ## Put your own adventures in it
 
@@ -33,7 +34,7 @@ our finished components in [release](release/).
 - [Build it with your adventures](docs/building.md)
 - [Program the cartridge, play and save](docs/programming.md)
 - [What's going on in the code](docs/code-guide.md)
-- [What we froze and checked](docs/verification.md)
+- [Code I froze and checked](docs/verification.md)
 
 The 8K GROM in `release/` is just our DSR and menu. It isn't a complete ATmega
 image. The EEPROM file starts with an empty save area, so back up your existing
