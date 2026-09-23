@@ -2,9 +2,10 @@
 
 # Adventure UberGROM 8K for the TI-99/4A
 
-I wanted to put the adventures and a small place to save games inside the
-cartridge. Pick an adventure, play it, save it, and come back to it later -
-without needing a disk system or cassette recorder.
+I've always wanted to put all of Scott Adam's adventures into a single cartridge.
+Having that at my fingertips as well as the ability to save one or more games in
+the cartridge without having to worry about a disk or cassette system to manage 
+saved games is something I've always dreamed about.
 
 That's what this does. **ROM1** holds the adventures, and **UBE1** holds your
 saved games. UBE1 stands for **UBergromEeprom1**. There's a **SAVED GAMES** item
