@@ -42,21 +42,25 @@
       "bytes": 4956,
       "sha256": "77466edff5ca5e4a33dbd91d68857db61364e0a046e7ddf2406d7e0cd6e0f512"
     },
+    "docs/maintaining.md": {
+      "bytes": 1493,
+      "sha256": "f4f87ba9cffbf5999cad7979bb595c35f1b9e26d7979b5fa3c9751a40702488a"
+    },
     "docs/programming.md": {
       "bytes": 3320,
       "sha256": "8c4d77a2ae36b2f920df42a8b6bd19d28ac01fd9347bb96c40625fbe79313e9e"
     },
     "docs/verification.md": {
-      "bytes": 2740,
-      "sha256": "0d8b96879334adb636af51fe379de59cb8e65c319bda0be27bd9fb7778b90459"
+      "bytes": 2177,
+      "sha256": "271c3055efaa553acbeec0aded1446bdd8c4cc5d459e5672bfaa77117e760a92"
     },
     "examples/adventures.json": {
       "bytes": 103,
       "sha256": "b7ea4ba76bcb4a5fa00e8dfdf9223479eecd432700694fd09693cbc25538b7d4"
     },
     "public-files.json": {
-      "bytes": 1103,
-      "sha256": "491eafac2e839c32b9298305166a4479dcc56ad6c5f964b09cab1b9808f83455"
+      "bytes": 1093,
+      "sha256": "a774cfedcb62bc7da51394debbea66e6c5009a59316e7110251eb1932a61c5bc"
     },
     "release/blank-eeprom.bin": {
       "bytes": 4096,
