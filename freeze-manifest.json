@@ -34,9 +34,13 @@
       "bytes": 3003,
       "sha256": "3e39eada799aaa70102a9c41fd9915af7a65a018c1e9fa905c874ba166e1d8a0"
     },
+    "docs/build-rom.md": {
+      "bytes": 3122,
+      "sha256": "ecb48786164cb790538c5691fa8e61976989ee6628f95b10108b7d6a66108078"
+    },
     "docs/building.md": {
-      "bytes": 4028,
-      "sha256": "2c1e13001e40c6fea081511c8826e3560dab7c67e500b8b9469c706cf7830cc5"
+      "bytes": 4181,
+      "sha256": "c451c7641f9e8e7fa4e3cc6a6070a117d0c787cfabb745ceb3d8019b869b1bbd"
     },
     "docs/code-guide.md": {
       "bytes": 9845,
@@ -59,8 +63,8 @@
       "sha256": "b7ea4ba76bcb4a5fa00e8dfdf9223479eecd432700694fd09693cbc25538b7d4"
     },
     "public-files.json": {
-      "bytes": 1093,
-      "sha256": "a774cfedcb62bc7da51394debbea66e6c5009a59316e7110251eb1932a61c5bc"
+      "bytes": 1144,
+      "sha256": "e325eff75b6f842bf7d71df43210ca61ac0c4eec01f57e79bda0beb9946f8a26"
     },
     "release/blank-eeprom.bin": {
       "bytes": 4096,
@@ -111,8 +115,8 @@
       "sha256": "a9da3e2d61abda74dbc2a2781eb16d44a483c2faf2d44d3727a410c214798a8e"
     },
     "tests/verify.py": {
-      "bytes": 4422,
-      "sha256": "0ae1110386c0b64af004e6da7de850ff6699263878f4a9bf5f50139d67b445cb"
+      "bytes": 5525,
+      "sha256": "7bac334f2bed148da72b59bc62ac764ffe1aa4158a1e9d72626f7dc84b2f0ec7"
     },
     "tools/build-docs.ps1": {
       "bytes": 5211,
@@ -121,6 +125,10 @@
     "tools/build.py": {
       "bytes": 10524,
       "sha256": "9a1e4e93058a388c41f06ba6ceda90f98a6268add12288b639f5b693dba05000"
+    },
+    "tools/build_rom.py": {
+      "bytes": 1824,
+      "sha256": "f29d43e34db247cba4054aa0ec6bf176daf6ad27a7f4a07fae2868adacbd8b62"
     },
     "tools/docs/markdown-print.css": {
       "bytes": 4191,

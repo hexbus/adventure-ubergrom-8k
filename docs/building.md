@@ -7,6 +7,9 @@ loader, so you don't have to assemble anything. If you want to read files
 straight from a disk image, or rebuild the GPL source, you'll also need
 [xdt99](https://github.com/endlos99/xdt99).
 
+For a data ROM of other PROGRAM files, use the [ROM-only directions](build-rom.md).
+That command needs neither the Adventure GROM nor the AVR firmware.
+
 ## Get the files
 
 Put your downloads in `local-inputs/`. That directory stays out of Git and the

@@ -9,6 +9,7 @@
     "LICENSE.md",
     "NOTICE.txt",
     "README.md",
+    "docs/build-rom.md",
     "docs/building.md",
     "docs/code-guide.md",
     "docs/maintaining.md",
@@ -31,6 +32,7 @@
     "tests/verify.py",
     "tools/build-docs.ps1",
     "tools/build.py",
+    "tools/build_rom.py",
     "tools/docs/markdown-print.css",
     "tools/docs/render-markdown-pdf.mjs",
     "tools/prepare_release.py"

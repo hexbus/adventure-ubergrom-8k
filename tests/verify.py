@@ -64,6 +64,22 @@ def verify(xdt99=None):
         entry = dict(name='TEST', path='test.tfi', format='tifiles')
         manifest.write_text(json.dumps(dict(files=[entry])))
         assert read_adventures(manifest) == {'TEST': payload}
+        # Run the public ROM-only command without a module GROM or firmware.
+        rom_out = temp/'rom-only'
+        command = [sys.executable, str(ROOT/'tools/build_rom.py'),
+                   '--files', str(manifest), '--out', str(rom_out)]
+        subprocess.run(command, check=True, capture_output=True, text=True)
+        assert {p.name for p in rom_out.iterdir()} == {'rom1-512k.bin', 'rom-map.txt', 'manifest.json'}
+        packed = (rom_out/'rom1-512k.bin').read_bytes()
+        assert len(packed) == 524288 and packed[0x10:0x16] == b'CF01\0\1'
+        assert packed[0x20:0x30] == b'TEST      '+len(payload).to_bytes(2, 'big')+b'\0\1\0\0'
+        assert packed[8192:8192+len(payload)] == payload
+        report = json.loads((rom_out/'manifest.json').read_text())
+        assert report['files'][0]['name'] == 'TEST'
+        import hashlib
+        assert report['outputs']['rom1-512k.bin']['sha256'] == hashlib.sha256(packed).hexdigest()
+        assert subprocess.run(command, capture_output=True).returncode != 0
+        assert (rom_out/'rom1-512k.bin').read_bytes() == packed
         manifest.write_text(json.dumps(dict(files=[entry, entry])))
         rejects(lambda: read_adventures(manifest))
         entry['format'] = 'raw'
