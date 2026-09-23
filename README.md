@@ -49,6 +49,3 @@ The code is **Apache 2.0** and the documentation is **CC BY 4.0**.
 See the [license details](LICENSE.md). If you use the UBE1 GROM in something
 else, I ask that you keep the `2026 Hexbus` signature in it so people know
 where it came from.
-
-The GitHub copy is prepared in `github-release/`. Nothing has been published
-yet. That copy leaves out our private inputs and old cartridge images.
